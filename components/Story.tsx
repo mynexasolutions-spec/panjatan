@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { Leaf, Award, PackageCheck, Sparkles, Smile } from "lucide-react";
 import type { HomepageSection } from "@/lib/cms";
 
@@ -10,30 +11,28 @@ export default function Story({ section }: { section?: HomepageSection }) {
       <div className="max-w-wrap mx-auto px-4 md:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
           
-          {/* Left Column: Mortar & Pestle Visual Container */}
+          {/* Left Column: About Image */}
           <div className="lg:col-span-5">
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-gradient-to-b from-amber-100 to-amber-900/20 aspect-[4/3] sm:aspect-square flex items-center justify-center group">
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white aspect-[4/3] sm:aspect-square group">
+              <Image
+                src="/about-panjatan.webp"
+                alt="Panjatan Ayurveda — Mortar, pestle and natural herbs"
+                fill
+                sizes="(max-width: 768px) 100vw, 500px"
+                className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+              />
               
-              {/* Graphic background representing mortar, pestle and herbs */}
-              <div className="absolute inset-0 bg-[#2D4536] mix-blend-multiply opacity-30" />
-              
-              <div className="relative z-10 text-center p-8 flex flex-col items-center justify-center">
-                {/* Mortar Pestle Icon illustration */}
-                <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-white/90 shadow-xl border-4 border-amber-600/30 flex items-center justify-center mb-4 transform group-hover:scale-105 transition-transform">
-                  <div className="relative">
-                    <Leaf className="w-12 h-12 md:w-16 md:h-16 text-emerald-800" />
-                    <Sparkles className="w-6 h-6 text-amber-500 absolute -top-2 -right-2 animate-pulse" />
-                  </div>
-                </div>
-
-                <div className="bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-lg border border-amber-200/60 max-w-xs">
-                  <span className="text-xs font-bold uppercase tracking-widest text-amber-800 block">
+              {/* Overlay badge */}
+              <div className="absolute bottom-4 left-4 right-4 z-10 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-lg border border-amber-200/60">
+                <div className="flex items-center gap-2 mb-1">
+                  <Leaf className="w-4 h-4 text-emerald-700" />
+                  <span className="text-xs font-bold uppercase tracking-widest text-amber-800">
                     Authentic Formulations
                   </span>
-                  <p className="text-xs font-semibold text-[#0D3B23] mt-1">
-                    Hand-crafted Ayurvedic blends backed by ancient texts & modern scientific purity.
-                  </p>
                 </div>
+                <p className="text-xs font-semibold text-[#0D3B23]">
+                  Hand-crafted Ayurvedic blends backed by ancient texts & modern scientific purity.
+                </p>
               </div>
             </div>
           </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Phone, Mail, Clock, Send, Facebook, Instagram, Youtube, MessageCircle, Leaf } from "lucide-react";
+import Image from "next/image";
+import { Phone, Mail, Clock, Send, Facebook, Instagram, Youtube, MessageCircle } from "lucide-react";
 import type { NavigationLink, SiteSettings } from "@/lib/cms";
 import { subscribeToNewsletter } from "@/actions/newsletter";
 
@@ -27,18 +28,14 @@ export default function FooterClient({ settings, footerLinks, legalLinks }: { se
           
           {/* Column 1: Brand Info (lg:col-span-4) */}
           <div className="lg:col-span-4 space-y-4">
-            <a href="/" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-white text-[#0D3B23] flex items-center justify-center font-bold text-lg">
-                <Leaf className="w-5 h-5 text-[#0A6C35]" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-display font-black text-xl tracking-tight uppercase text-white">
-                  {settings.site_name.split(" ")[0]}
-                </span>
-                <span className="text-[9px] tracking-[0.25em] font-extrabold text-emerald-400 uppercase -mt-1">
-                  {settings.site_name.split(" ").slice(1).join(" ")}
-                </span>
-              </div>
+            <a href="/">
+              <Image
+                src="/panjatan-logo.jpeg"
+                alt={settings.site_name}
+                width={160}
+                height={50}
+                className="h-10 md:h-12 w-auto object-contain bg-white rounded-lg px-2 py-1"
+              />
             </a>
 
             <p className="text-emerald-100/80 text-xs md:text-sm leading-relaxed max-w-sm">
@@ -86,12 +83,12 @@ export default function FooterClient({ settings, footerLinks, legalLinks }: { se
             </div>
           </div>
 
-          {/* Column 2: Quick Links (lg:col-span-3) */}
-          <div className="lg:col-span-3 space-y-3">
+          {/* Column 2: Quick Links (lg:col-span-2) */}
+          <div className="lg:col-span-2 space-y-3">
             <h4 className="font-extrabold text-white text-base tracking-wide uppercase">
               Quick Links
             </h4>
-            <ul className="grid grid-cols-2 gap-y-2 text-xs md:text-sm font-medium text-emerald-100/80">
+            <ul className="flex flex-col gap-y-2 text-xs md:text-sm font-medium text-emerald-100/80">
               {footerLinks.map((link) => (
                 <li key={link.id || `${link.location}-${link.href}`}>
                   <a href={link.href} target={link.is_external ? "_blank" : undefined} rel={link.is_external ? "noreferrer" : undefined} className="hover:text-white transition-colors">
@@ -102,8 +99,24 @@ export default function FooterClient({ settings, footerLinks, legalLinks }: { se
             </ul>
           </div>
 
-          {/* Column 3: Customer Care (lg:col-span-3) */}
-          <div className="lg:col-span-3 space-y-3">
+          {/* Column 3: Policies (lg:col-span-2) */}
+          <div className="lg:col-span-2 space-y-3">
+            <h4 className="font-extrabold text-white text-base tracking-wide uppercase">
+              Policies
+            </h4>
+            <ul className="flex flex-col gap-y-2 text-xs md:text-sm font-medium text-emerald-100/80">
+              {legalLinks.map((link) => (
+                <li key={link.id || `${link.location}-${link.href}`}>
+                  <a href={link.href} target={link.is_external ? "_blank" : undefined} rel={link.is_external ? "noreferrer" : undefined} className="hover:text-white transition-colors">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Column 4: Customer Care (lg:col-span-2) */}
+          <div className="lg:col-span-2 space-y-3">
             <h4 className="font-extrabold text-white text-base tracking-wide uppercase">
               Customer Care
             </h4>
@@ -123,7 +136,7 @@ export default function FooterClient({ settings, footerLinks, legalLinks }: { se
             </ul>
           </div>
 
-          {/* Column 4: Newsletter (lg:col-span-2) */}
+          {/* Column 5: Newsletter (lg:col-span-2) */}
           <div className="lg:col-span-2 space-y-3">
             <h4 className="font-extrabold text-white text-base tracking-wide uppercase">
               Newsletter
@@ -154,18 +167,8 @@ export default function FooterClient({ settings, footerLinks, legalLinks }: { se
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-emerald-200/70 gap-3">
+        <div className="pt-6 flex items-center justify-center text-center text-xs text-emerald-200/70">
           <p>© {new Date().getFullYear()} {settings.site_name}, All Rights Reserved.</p>
-          <div className="flex items-center gap-4">
-            {legalLinks.map((link, index) => (
-              <React.Fragment key={link.id || `${link.location}-${link.href}`}>
-                {index > 0 && <span>•</span>}
-                <a href={link.href} target={link.is_external ? "_blank" : undefined} rel={link.is_external ? "noreferrer" : undefined} className="hover:text-white transition-colors">
-                  {link.label}
-                </a>
-              </React.Fragment>
-            ))}
-          </div>
         </div>
 
       </div>

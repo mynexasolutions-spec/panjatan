@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { ShieldCheck, Award, Leaf, Users, ArrowRight } from "lucide-react";
 import type { HomepageSection } from "@/lib/cms";
 
 export default function Hero({ section }: { section?: HomepageSection }) {
   return (
-    <section className="relative pt-[120px] md:pt-[150px] pb-12 md:pb-20 bg-gradient-to-b from-[#F2F7F4] via-[#F8FBF9] to-white overflow-hidden">
+    <section className="relative pt-[140px] md:pt-[150px] pb-12 md:pb-20 bg-gradient-to-b from-[#F2F7F4] via-[#F8FBF9] to-white overflow-hidden">
       {/* Background Subtle Leaf Accents */}
       <div className="absolute top-10 left-5 w-64 h-64 bg-emerald-100/40 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-5 w-96 h-96 bg-emerald-200/30 rounded-full blur-3xl pointer-events-none" />
@@ -63,17 +64,17 @@ export default function Hero({ section }: { section?: HomepageSection }) {
             </div>
 
             {/* CTA Action Buttons */}
-            <div className="flex flex-wrap items-center gap-4 pt-4">
+            <div className="flex items-center gap-3 md:gap-4 pt-4">
               <a
                 href={section?.link_url || "/shop"}
-                className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#0A6C35] hover:bg-[#0D3B23] text-white font-bold text-sm tracking-wide shadow-md transition-all transform hover:-translate-y-0.5"
+                className="inline-flex items-center justify-center px-6 md:px-8 py-3 md:py-3.5 rounded-full bg-[#0A6C35] hover:bg-[#0D3B23] text-white font-bold text-sm tracking-wide shadow-md transition-all transform hover:-translate-y-0.5 whitespace-nowrap"
               >
                 {section?.link_label || "SHOP NOW"}
               </a>
 
               <a
                 href="#categories"
-                className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-white border border-[#0A6C35] text-[#0A6C35] hover:bg-emerald-50 font-bold text-sm tracking-wide shadow-sm transition-all"
+                className="inline-flex items-center justify-center px-6 md:px-8 py-3 md:py-3.5 rounded-full bg-white border border-[#0A6C35] text-[#0A6C35] hover:bg-emerald-50 font-bold text-sm tracking-wide shadow-sm transition-all whitespace-nowrap"
               >
                 EXPLORE PRODUCTS
               </a>
@@ -81,7 +82,7 @@ export default function Hero({ section }: { section?: HomepageSection }) {
 
           </div>
 
-          {/* Right Hero Product Graphic Box */}
+          {/* Right Hero Product Image */}
           <div className="lg:col-span-5 relative flex justify-center">
             
             {/* Trusted 20+ Years Stamp Overlay */}
@@ -93,63 +94,16 @@ export default function Hero({ section }: { section?: HomepageSection }) {
               </div>
             </div>
 
-            {/* Main Hero Banner Visual Container */}
-            <div className="relative w-full max-w-md aspect-[4/3.5] bg-gradient-to-tr from-emerald-900 via-emerald-800 to-teal-900 rounded-3xl p-6 shadow-2xl overflow-hidden border border-emerald-700/40 flex flex-col justify-between">
-              
-              {/* Product Visual Mockup Overlay */}
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/20 via-transparent to-black/40" />
-
-              {/* Header inside graphic box */}
-              <div className="relative z-10 flex items-center justify-between">
-                <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-white text-[11px] font-semibold tracking-wider uppercase">
-                  ⭐ Top Seller Formulation
-                </span>
-              </div>
-
-              {/* Center Box & Bottle Representation */}
-              <div className="relative z-10 py-6 flex items-center justify-center gap-4">
-                
-                {/* Product Box Mockup */}
-                <div className="w-32 md:w-36 bg-gradient-to-b from-white to-amber-50 border-2 border-emerald-600 rounded-xl p-3 shadow-2xl flex flex-col items-center text-center transform -rotate-3">
-                  <div className="w-full bg-[#0D3B23] text-white py-1 text-[9px] font-bold rounded uppercase">
-                    PANJATAN
-                  </div>
-                  <div className="my-2">
-                    <h3 className="font-extrabold text-emerald-900 text-sm leading-tight">PACHAN PLUS</h3>
-                    <p className="text-[10px] text-amber-800 font-semibold italic">Chatni</p>
-                  </div>
-                  <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center my-1">
-                    <Leaf className="w-6 h-6 text-emerald-700" />
-                  </div>
-                  <span className="mt-1 text-[9px] bg-emerald-800 text-white px-2 py-0.5 rounded font-medium">
-                    पाचन प्लस चटनी
-                  </span>
-                </div>
-
-                {/* Product Bottle Mockup */}
-                <div className="w-28 md:w-32 bg-gray-900 text-white rounded-2xl p-2.5 shadow-2xl border border-gray-700 flex flex-col items-center text-center transform rotate-2">
-                  <div className="w-10 h-3 bg-black rounded-t-md border-b border-gray-800" />
-                  <div className="w-full bg-gradient-to-b from-amber-50 to-white text-gray-900 rounded-lg p-2 my-1 border border-emerald-500">
-                    <span className="text-[8px] font-bold text-emerald-800 uppercase block">PANJATAN</span>
-                    <span className="text-xs font-black text-[#0D3B23] block leading-tight">PACHAN PLUS</span>
-                    <span className="text-[9px] font-semibold text-amber-700 block">Chatni</span>
-                    <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 mx-auto my-1 flex items-center justify-center">
-                      <Leaf className="w-4 h-4 text-emerald-700" />
-                    </div>
-                    <span className="text-[8px] text-gray-600 block font-medium">Digestive Care 200g</span>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Bottom tag inside box */}
-              <div className="relative z-10 bg-black/40 backdrop-blur-md rounded-xl p-2.5 text-center text-white text-xs font-semibold flex items-center justify-between border border-white/10">
-                <span>Pachan Plus Complete Digestive Care</span>
-                <a href="/shop" className="text-amber-300 font-bold hover:underline flex items-center gap-1 text-xs">
-                  Buy <ArrowRight className="w-3.5 h-3.5" />
-                </a>
-              </div>
-
+            {/* Main Hero Banner Image */}
+            <div className="relative w-full max-w-md aspect-square rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
+              <Image
+                src="/banner.webp"
+                alt="Panjatan Ayurveda — Pachan Plus Churan"
+                fill
+                sizes="(max-width: 768px) 100vw, 450px"
+                className="object-cover"
+                priority
+              />
             </div>
 
           </div>

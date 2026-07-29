@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import type { NavigationLink, SiteSettings } from "@/lib/cms";
 import { useCart } from "@/context/CartContext";
 import CartDrawer from "./CartDrawer";
@@ -38,26 +39,26 @@ export default function HeaderClient({ settings, navLinks }: { settings: SiteSet
     <>
       <header className="fixed top-0 inset-x-0 z-[9999] bg-white transition-shadow duration-300">
         {/* Top Announcement Bar - Dark Green */}
-        <div className="bg-[#0D3B23] text-white text-xs py-2 px-4 md:px-8 border-b border-emerald-900">
-          <div className="max-w-wrap mx-auto flex flex-wrap items-center justify-between gap-2">
+        <div className="bg-[#0D3B23] text-white text-xs py-1.5 px-3 md:px-8 border-b border-emerald-900 overflow-hidden">
+          <div className="max-w-wrap mx-auto flex items-center justify-between gap-3 md:gap-2 whitespace-nowrap">
             {/* Left Items with Green Checkmarks */}
-            <div className="flex items-center flex-wrap gap-4 md:gap-6 text-[11px] md:text-xs font-medium tracking-wide">
-              <span className="inline-flex items-center gap-1.5 opacity-90">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> GMP Certified
+            <div className="flex items-center gap-2.5 md:gap-6 text-[10px] md:text-xs font-medium tracking-wide min-w-0">
+              <span className="inline-flex items-center gap-1 opacity-90">
+                <CheckCircle2 className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-400 shrink-0" /> GMP Certified
               </span>
-              <span className="inline-flex items-center gap-1.5 opacity-90">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> ISO Certified
+              <span className="inline-flex items-center gap-1 opacity-90">
+                <CheckCircle2 className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-400 shrink-0" /> ISO Certified
               </span>
-              <span className="inline-flex items-center gap-1.5 opacity-90">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 100% Ayurvedic
+              <span className="inline-flex items-center gap-1 opacity-90">
+                <CheckCircle2 className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-400 shrink-0" /> 100% Ayurvedic
               </span>
               <span className="hidden sm:inline-flex items-center gap-1.5 opacity-90">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> No Harmful Chemicals
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> No Harmful Chemicals
               </span>
             </div>
 
             {/* Right Side Announcement */}
-            <div className="text-[11px] md:text-xs font-medium tracking-wide text-emerald-100 ml-auto sm:ml-0">
+            <div className="hidden sm:block text-[11px] md:text-xs font-medium tracking-wide text-emerald-100 truncate">
               {settings.announcement_text}
             </div>
           </div>
@@ -67,20 +68,15 @@ export default function HeaderClient({ settings, navLinks }: { settings: SiteSet
         <div className={`transition-all duration-300 ${scrolled ? "shadow-md bg-white/95 backdrop-blur-md" : "bg-white"}`}>
           <div className="max-w-wrap mx-auto px-4 md:px-8 flex items-center justify-between h-[68px] md:h-[76px]">
             {/* Brand Logo */}
-            <a href="/" className="flex items-center gap-2.5 shrink-0 group">
-              <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#0D3B23] text-white flex items-center justify-center font-bold text-xl shadow-sm">
-                <svg className="w-6 h-6 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17 8C15 8 13.5 9 12 10.5C10.5 9 9 8 7 8C4 8 2 10.5 2 13.5C2 17.5 7 21 12 21C17 21 22 17.5 22 13.5C22 10.5 20 8 17 8ZM12 19C8 16.5 4 13.8 4 12C4 10.8 5.2 9.5 7 9.5C8.8 9.5 10.2 10.7 11.2 12.1L12 13.2L12.8 12.1C13.8 10.7 15.2 9.5 17 9.5C18.8 9.5 20 10.8 20 12C20 13.8 16 16.5 12 19Z" />
-                </svg>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-display font-extrabold text-lg md:text-xl tracking-tight text-[#0D3B23] uppercase">
-                  {settings.site_name.split(" ")[0]}
-                </span>
-                <span className="text-[10px] tracking-[0.25em] font-bold text-amber-700 uppercase -mt-1">
-                  {settings.site_name.split(" ").slice(1).join(" ")}
-                </span>
-              </div>
+            <a href="/" className="shrink-0">
+              <Image
+                src="/panjatan-logo.jpeg"
+                alt={settings.site_name}
+                width={160}
+                height={50}
+                className="h-10 md:h-12 w-auto object-contain"
+                priority
+              />
             </a>
 
             {/* Desktop Navigation */}

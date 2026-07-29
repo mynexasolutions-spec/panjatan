@@ -91,7 +91,7 @@ export default async function ShopPage({
         {/* Shop Hero Banner */}
         <section className="relative w-full h-[250px] md:h-[340px] bg-emerald-deep flex items-center justify-center overflow-hidden border-b border-cream-line">
           <Image
-            src="/shop-banner.png"
+            src="/shop-banner.webp"
             alt="Panjatan Ayurveda product collection"
             fill
             className="object-cover opacity-80 mix-blend-luminosity"
