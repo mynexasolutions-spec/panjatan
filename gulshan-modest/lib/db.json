@@ -1,0 +1,253 @@
+{
+  "profiles": [
+    {
+      "id": "mock-admin-id",
+      "email": "admin@gulshanmodest.com",
+      "role": "admin",
+      "full_name": "Admin",
+      "phone": "+91 87964 59447",
+      "is_active": true,
+      "created_at": "2026-06-25T14:34:14Z"
+    },
+    {
+      "id": "customer-1",
+      "email": "sumaiya@gmail.com",
+      "role": "customer",
+      "full_name": "Sumaiya R.",
+      "phone": "+91 99999 88888",
+      "is_active": true,
+      "created_at": "2026-06-26T12:00:00Z"
+    },
+    {
+      "id": "customer-2",
+      "email": "afreen@gmail.com",
+      "role": "customer",
+      "full_name": "Afreen K.",
+      "phone": "+91 99999 77777",
+      "is_active": true,
+      "created_at": "2026-06-26T15:00:00Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "abayas",
+      "name": "Abayas",
+      "slug": "abayas",
+      "description": "Flowing double layer & classic silhouettes in breathable crepe & nida",
+      "image_url": "/abaya-double-layer.png",
+      "count": "32 styles",
+      "is_active": true,
+      "created_at": "2026-06-25T14:34:14Z"
+    },
+    {
+      "id": "hijabs",
+      "name": "Hijabs",
+      "slug": "hijabs",
+      "description": "Basic Luxe chiffon, luxury jersey and multi-colour wrap sets",
+      "image_url": "/hijab-medina.jpg",
+      "count": "27 styles",
+      "is_active": true,
+      "created_at": "2026-06-25T14:34:14Z"
+    },
+    {
+      "id": "jilbabs",
+      "name": "Jilbabs",
+      "slug": "jilbabs",
+      "description": "Full coverage flowing overhead drapes in classic shades & royal blue",
+      "image_url": "/jilbab-blue.png",
+      "count": "4 styles",
+      "is_active": true,
+      "created_at": "2026-06-25T14:34:14Z"
+    },
+    {
+      "id": "khimars",
+      "name": "Khimars",
+      "slug": "khimars",
+      "description": "One layer or exquisitely detailed handwork khimars",
+      "image_url": "/khimar-handwork-1.png",
+      "count": "6 styles",
+      "is_active": true,
+      "created_at": "2026-06-25T14:34:14Z"
+    },
+    {
+      "id": "salwar_kameez",
+      "name": "Luxe Salwar Kameez",
+      "slug": "luxe-salwar-kameez",
+      "description": "Exquisite Pakistani salwar suits, heavy embroidery, and luxury lawn sets",
+      "image_url": "/luxe-salwar-kameez.png",
+      "count": "12 styles",
+      "is_active": true,
+      "created_at": "2026-06-30T15:00:00Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "p1",
+      "name": "Front Open Double Layer Abaya",
+      "slug": "front-open-double-layer-abaya",
+      "category_id": "abayas",
+      "price": 3299,
+      "oldPrice": 3999,
+      "image_url": "/abaya-double-layer.png",
+      "badge": "Bestseller",
+      "rating": 4.9,
+      "is_active": true,
+      "is_featured": true,
+      "description": "Premium front open double layer abaya designed with maximum flow and drape.",
+      "short_description": "Front open double layer abaya",
+      "created_at": "2026-06-25T14:34:14Z"
+    },
+    {
+      "id": "p2",
+      "name": "Basic Luxe Chiffon Hijab — Medina",
+      "slug": "basic-luxe-chiffon-hijab-medina",
+      "category_id": "hijabs",
+      "price": 699,
+      "oldPrice": 899,
+      "image_url": "/hijab-medina.jpg",
+      "badge": "New",
+      "rating": 4.8,
+      "is_active": true,
+      "is_featured": true,
+      "description": "Premium quality chiffon hijab with neat baby hem finishing.",
+      "short_description": "Premium quality chiffon hijab",
+      "created_at": "2026-06-25T14:34:14Z"
+    },
+    {
+      "id": "p3",
+      "name": "Luxury Jersey Hijab — Muted Sage",
+      "slug": "luxury-jersey-hijab-muted-sage",
+      "category_id": "hijabs",
+      "price": 799,
+      "image_url": "/hijab-muted-sage.jpeg",
+      "badge": "Hot",
+      "rating": 4.9,
+      "is_active": true,
+      "is_featured": true,
+      "description": "Super soft, stretchable, and durable jersey hijab.",
+      "short_description": "Super soft jersey hijab",
+      "created_at": "2026-06-25T14:34:14Z"
+    },
+    {
+      "id": "p4",
+      "name": "Classic Flowing Blue Jilbab",
+      "slug": "classic-flowing-blue-jilbab",
+      "category_id": "jilbabs",
+      "price": 3499,
+      "oldPrice": 4299,
+      "image_url": "/jilbab-blue.png",
+      "badge": "Premium",
+      "rating": 4.7,
+      "is_active": true,
+      "is_featured": true,
+      "description": "Overhead flowing jilbab with finger loops and high-quality tie back band.",
+      "short_description": "Overhead flowing blue jilbab",
+      "created_at": "2026-06-25T14:34:14Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": "order-1",
+      "order_number": "10001",
+      "total_amount": 3299,
+      "order_status": "processing",
+      "payment_status": "paid",
+      "created_at": "2026-06-27T10:00:00Z"
+    },
+    {
+      "id": "order-2",
+      "order_number": "10002",
+      "total_amount": 1498,
+      "order_status": "cancelled",
+      "payment_status": "pending",
+      "created_at": "2026-06-27T12:00:00Z",
+      "cancelled_at": "2026-06-27T18:42:42.330Z"
+    }
+  ],
+  "reviews": [],
+  "inquiries": [],
+  "hero_slides": [
+    {
+      "id": "slide-1",
+      "image_url": "/model-cream-hijab.png",
+      "title": "Gulshan Modest",
+      "subtitle": "Modest Fashion, Quietly Elevated",
+      "button_text": "Shop on WhatsApp",
+      "button_link": "https://wa.me/918796459447",
+      "text_mode": "global",
+      "is_active": true,
+      "display_order": 0,
+      "created_at": "2026-06-25T14:34:14Z"
+    },
+    {
+      "id": "slide-2",
+      "image_url": "/abaya-double-layer.png",
+      "title": "",
+      "subtitle": "",
+      "button_text": "",
+      "button_link": "",
+      "text_mode": "global",
+      "is_active": true,
+      "display_order": 1,
+      "created_at": "2026-06-25T14:34:14Z"
+    },
+    {
+      "id": "slide-3",
+      "image_url": "/khimar-handwork.png",
+      "title": "",
+      "subtitle": "",
+      "button_text": "",
+      "button_link": "",
+      "text_mode": "global",
+      "is_active": true,
+      "display_order": 2,
+      "created_at": "2026-06-25T14:34:14Z"
+    },
+    {
+      "id": "slide-4",
+      "image_url": "/jilbab-blue.png",
+      "title": "",
+      "subtitle": "",
+      "button_text": "",
+      "button_link": "",
+      "text_mode": "global",
+      "is_active": true,
+      "display_order": 3,
+      "created_at": "2026-06-25T14:34:14Z"
+    }
+  ],
+  "coupons": [
+    {
+      "id": "c1",
+      "code": "EID50",
+      "type": "percentage",
+      "value": 50,
+      "min_purchase": 999,
+      "is_active": true,
+      "created_at": "2026-06-27T18:00:00Z"
+    },
+    {
+      "id": "c2",
+      "code": "WELCOME100",
+      "type": "flat",
+      "value": 100,
+      "min_purchase": 499,
+      "is_active": true,
+      "created_at": "2026-06-27T18:00:00Z"
+    }
+  ],
+  "settings": {
+    "announcements": [
+      {
+        "id": "ann-1",
+        "text": "Eid Special Collection is Live! Free Shipping Pan-India.",
+        "is_active": true
+      }
+    ],
+    "faqs": [],
+    "shipping": {
+      "flat_rate": 99,
+      "free_threshold": 1999
+    }
+  }
+}
