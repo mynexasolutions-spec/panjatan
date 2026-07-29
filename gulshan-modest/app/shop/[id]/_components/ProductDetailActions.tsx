@@ -90,18 +90,15 @@ export default function ProductDetailActions({ product, selectedColor = null }: 
       return
     }
 
-    for (let i = 0; i < quantity; i++) {
-      addToCart({
-        id: product.id,
-        name: product.name,
-        price: currentPrice,
-        image_url: product.image_url,
-        category_name: product.category_name,
-        variant_id: `${selectedVariant?.id || 'default'}-${selectedColor || 'default'}`,
-        variant_name: `${getDisplayName(selectedVariant?.variant_name || '')}${selectedColor ? ` (${selectedColor})` : ''}`
-      })
-    }
-    showToast(`${quantity} × ${product.name} added to cart successfully!`, "success")
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: currentPrice,
+      image_url: product.image_url,
+      category_name: product.category_name,
+      variant_id: selectedVariant?.id,
+      variant_name: `${getDisplayName(selectedVariant?.variant_name || '')}${selectedColor ? ` (${selectedColor})` : ''}`
+    }, quantity)
   }
 
   const handleBuyNow = () => {

@@ -2,7 +2,7 @@ import { getGlobalFaqs } from '@/actions/global_faqs'
 import { GlobalFaqsEditor } from '@/components/admin/GlobalFaqsEditor'
 
 export const metadata = {
-  title: 'Global FAQs | Gulshan Modest Admin',
+  title: 'Global FAQs | Panjatan Ayurveda Admin',
 }
 
 export default async function GlobalFaqsPage() {

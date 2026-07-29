@@ -3,10 +3,11 @@ import Footer from '@/components/Footer'
 import ShopGrid from './_components/ShopGrid'
 import { createClient } from "@/lib/supabase/server";
 import Image from 'next/image'
+import { getStorefrontShell } from '@/lib/cms'
 
 export const metadata = {
-  title: 'Shop Collection | Gulshan Modest',
-  description: 'Browse our complete premium collection of modest abayas, hijabs, jilbabs and khimars.',
+  title: 'Shop Collection | Panjatan Ayurveda',
+  description: 'Browse Panjatan Ayurveda medicines and natural herbal wellness products.',
 }
 
 export default async function ShopPage({
@@ -15,6 +16,7 @@ export default async function ShopPage({
   searchParams: { category?: string; search?: string; featured?: string }
 }) {
   const supabase = await createClient();
+  const { settings } = await getStorefrontShell();
 
   const resolvedSearchParams = await searchParams;
   const searchQuery = resolvedSearchParams.search || '';
@@ -25,7 +27,7 @@ export default async function ShopPage({
     .select(`
       id, name, slug, category_id, is_active, badge, rating, price, oldPrice, featured_image_url, color_group_id, color_name, created_at,
       product_images ( image_url ),
-      product_variants ( price, original_price )
+      product_variants ( id, variant_name, price, original_price, stock_quantity, is_active )
     `)
     .eq("is_active", true)
     .order('created_at', { ascending: false });
@@ -68,8 +70,10 @@ export default async function ShopPage({
     slug: p.slug,
     category_id: p.category_id,
     image_url: p.product_images?.[0]?.image_url || p.featured_image_url || "/image.png",
-    price: p.product_variants?.[0]?.price || p.price || 0,
-    oldPrice: p.product_variants?.[0]?.original_price || p.oldPrice || undefined,
+    price: p.product_variants?.find((variant: any) => variant.is_active !== false && variant.stock_quantity > 0)?.price || p.product_variants?.[0]?.price || p.price || 0,
+    oldPrice: p.product_variants?.find((variant: any) => variant.is_active !== false && variant.stock_quantity > 0)?.original_price || p.product_variants?.[0]?.original_price || p.oldPrice || undefined,
+    variant_id: p.product_variants?.find((variant: any) => variant.is_active !== false && variant.stock_quantity > 0)?.id || p.product_variants?.[0]?.id,
+    variant_name: p.product_variants?.find((variant: any) => variant.is_active !== false && variant.stock_quantity > 0)?.variant_name || p.product_variants?.[0]?.variant_name,
     badge: p.badge,
     rating: p.rating || 5,
     colors: parseProductColors(p.color_name),
@@ -88,7 +92,7 @@ export default async function ShopPage({
         <section className="relative w-full h-[250px] md:h-[340px] bg-emerald-deep flex items-center justify-center overflow-hidden border-b border-cream-line">
           <Image
             src="/shop-banner.png"
-            alt="Gulshan Modest Fashion Collection"
+            alt="Panjatan Ayurveda product collection"
             fill
             className="object-cover opacity-80 mix-blend-luminosity"
             priority
@@ -98,14 +102,14 @@ export default async function ShopPage({
           <div className="relative z-10 text-center px-5">
             <div className="eyebrow justify-center inline-flex items-center gap-2 mb-3 text-gold-light">
               <span className="h-px w-6 bg-gold" />
-              Complete Collection
+              Ayurvedic Wellness
               <span className="h-px w-6 bg-gold" />
             </div>
             <h1 className="font-display font-bold text-3xl md:text-5xl text-cream tracking-wide">
-              Shop the Drop
+              {settings.shop_banner_title}
             </h1>
             <p className="mt-4 text-cream/70 font-body text-sm md:text-base max-w-lg mx-auto">
-              Timeless silhouettes designed with maximum drape, elegance, and comfort.
+              {settings.shop_banner_description}
             </p>
           </div>
         </section>

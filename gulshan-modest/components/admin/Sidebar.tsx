@@ -20,6 +20,10 @@ import {
   Truck,
   Tag,
   X,
+  FileText,
+  Home,
+  Navigation,
+  Newspaper,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAdminSidebar } from '@/context/AdminSidebarContext'
@@ -35,6 +39,11 @@ const navItems = [
   { label: 'Hero Slides', href: '/admin/hero-slides', icon: Image },
   { label: 'Home Banner', href: '/admin/home-banner', icon: Images },
   { label: 'Announcements', href: '/admin/announcements', icon: Megaphone },
+  { label: 'General Content', href: '/admin/content/general', icon: Settings },
+  { label: 'Homepage Content', href: '/admin/content/home', icon: Home },
+  { label: 'Content Pages', href: '/admin/content/pages', icon: FileText },
+  { label: 'Navigation', href: '/admin/content/navigation', icon: Navigation },
+  { label: 'Newsletter', href: '/admin/content/newsletter', icon: Newspaper },
   { label: 'Global FAQs', href: '/admin/settings/faqs', icon: Settings },
   { label: 'Shipping Settings', href: '/admin/settings/shipping', icon: Truck },
   { label: 'Manage Coupons', href: '/admin/settings/coupons', icon: Tag },
@@ -66,12 +75,12 @@ export default function AdminSidebar() {
         {/* Brand */}
         <div className="h-16 flex items-center px-4 border-b border-[#E6DAC4] gap-3">
           <div className="w-9 h-9 bg-gradient-to-br from-teal-700 to-teal-800 rounded-lg flex items-center justify-center shrink-0 shadow-lg shadow-teal-700/20">
-            <span className="text-white font-bold text-sm">G</span>
+            <span className="text-white font-bold text-sm">P</span>
           </div>
           {!collapsed && (
             <div className="overflow-hidden flex-1">
               <p className="text-ink font-semibold text-sm leading-tight truncate">
-                Gulshan Modest
+                Panjatan Ayurveda
               </p>
               <p className="text-ink/50 text-xs truncate">Admin Panel</p>
             </div>

@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, Search, Filter } from 'lucide-react'
 
@@ -7,7 +8,8 @@ export const metadata = {
 }
 
 export default async function AdminOrdersPage() {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) redirect('/admin/login')
 
   // Fetch all orders with user profile info
   const { data: orders } = await supabase
@@ -81,8 +83,8 @@ export default async function AdminOrdersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="font-medium text-stone-900">{order.profiles?.full_name || 'Guest'}</span>
-                        <span className="text-xs text-stone-500">{order.profiles?.email}</span>
+                        <span className="font-medium text-stone-900">{order.profiles?.full_name || order.customer_name || 'Guest'}</span>
+                        <span className="text-xs text-stone-500">{order.profiles?.email || (order.customer_phone ? `+91 ${order.customer_phone}` : '')}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -91,6 +93,7 @@ export default async function AdminOrdersPage() {
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
                         order.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
+                        order.payment_status === 'simulated' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                         order.payment_status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
                         order.payment_status === 'refunded' ? 'bg-stone-100 text-stone-700 border-stone-200' :
                         'bg-orange-50 text-orange-700 border-orange-200' // pending

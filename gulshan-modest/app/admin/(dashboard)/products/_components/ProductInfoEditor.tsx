@@ -117,7 +117,7 @@ export default function ProductInfoEditor({
               maxLength={1000}
               value={item.value}
               onChange={(e) => updateItem(index, 'value', e.target.value)}
-              placeholder="Value (e.g. Gulshan Modest)"
+              placeholder="Value (e.g. Panjatan Ayurveda)"
               className="flex-1 px-3 py-2 rounded-lg border border-stone-200 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all"
             />
             <button

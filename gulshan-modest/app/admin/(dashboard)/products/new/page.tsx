@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
+import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import ProductForm from '../_components/ProductForm'
 
@@ -7,7 +8,8 @@ export const metadata: Metadata = {
 }
 
 export default async function NewProductPage() {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) redirect('/admin/login')
 
   const [{ data: categories }, { data: otherProducts }] = await Promise.all([
     supabase.from('categories').select('*').eq('is_active', true).order('name'),

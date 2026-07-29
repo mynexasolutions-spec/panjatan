@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Plus, Package } from 'lucide-react'
 import type { Metadata } from 'next'
@@ -9,7 +10,8 @@ export const metadata: Metadata = {
 }
 
 export default async function ProductsPage() {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) redirect('/admin/login')
 
   const { data: products } = await supabase
     .from('products')

@@ -12,12 +12,17 @@ export async function updateSession(request: NextRequest) {
   let supabase: any
 
   if (!url || !key || url.includes('placeholder') || url === '') {
+    const allowMocks =
+      process.env.NODE_ENV !== 'production' &&
+      process.env.ENABLE_DEV_MOCKS === 'true'
     supabase = {
       auth: {
         getUser: async () => {
-          const hasMockCookie = request.cookies.get('mock-admin-logged-in')?.value === 'true'
+          const hasMockCookie =
+            allowMocks &&
+            request.cookies.get('mock-admin-logged-in')?.value === 'true'
           if (hasMockCookie) {
-            return { data: { user: { id: 'mock-admin-id', email: 'admin@gulshanmodest.com' } }, error: null }
+            return { data: { user: { id: 'mock-admin-id', email: 'admin@panjatanayurveda.com' } }, error: null }
           }
           return { data: { user: null }, error: null }
         }

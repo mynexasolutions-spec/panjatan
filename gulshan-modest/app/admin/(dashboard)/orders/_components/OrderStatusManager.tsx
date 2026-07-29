@@ -5,7 +5,7 @@ import { updateOrderStatus, updatePaymentStatus } from '@/actions/admin/orders'
 import { Check, Loader2 } from 'lucide-react'
 
 const ORDER_STATUSES = ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
-const PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded']
+const PAYMENT_STATUSES = ['pending', 'simulated', 'paid', 'failed', 'refunded']
 
 export function OrderStatusManager({ 
   orderId, 

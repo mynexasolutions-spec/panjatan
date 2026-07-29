@@ -2,8 +2,9 @@
 
 import React from "react";
 import { Leaf, Award, PackageCheck, Sparkles, Smile } from "lucide-react";
+import type { HomepageSection } from "@/lib/cms";
 
-export default function Story() {
+export default function Story({ section }: { section?: HomepageSection }) {
   return (
     <section className="py-16 md:py-24 bg-[#F8F6F0] relative overflow-hidden">
       <div className="max-w-wrap mx-auto px-4 md:px-8">
@@ -47,12 +48,12 @@ export default function Story() {
 
             {/* Title */}
             <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#0D3B23] leading-tight">
-              About Panjatan Ayurveda
+              {section?.heading || "About Panjatan Ayurveda"}
             </h2>
 
             {/* Paragraph */}
             <p className="text-gray-700 text-base md:text-lg leading-relaxed">
-              Panjatan Ayurveda is committed to providing safe, effective and natural healthcare through the timeless wisdom of Ayurveda. Our products are manufactured in GMP &amp; ISO certified units using the finest quality herbs.
+              {section?.body || "Panjatan Ayurveda is committed to providing safe, effective and natural healthcare through the timeless wisdom of Ayurveda. Our products are manufactured in GMP & ISO certified units using the finest quality herbs."}
             </p>
 
             {/* 4 Stats Grid */}
@@ -93,10 +94,10 @@ export default function Story() {
             {/* Button */}
             <div className="pt-2">
               <a
-                href="/about"
+                href={section?.link_url || "/about"}
                 className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#0A6C35] hover:bg-[#0D3B23] text-white font-bold text-sm tracking-wide shadow-md transition-all"
               >
-                KNOW MORE ABOUT US
+                {section?.link_label || "KNOW MORE ABOUT US"}
               </a>
             </div>
 

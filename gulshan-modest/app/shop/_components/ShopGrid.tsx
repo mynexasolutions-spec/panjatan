@@ -17,6 +17,8 @@ type Product = {
   badge?: string
   rating: number
   is_active: boolean
+  variant_id?: string
+  variant_name?: string
   colorCount?: number
   colors?: { name: string; hex: string }[]
 }
@@ -243,7 +245,9 @@ export default function ShopGrid({ initialProducts, categories, selectedCategory
                           name: p.name,
                           price: p.price,
                           image_url: p.image_url,
-                          category_name: catName
+                          category_name: catName,
+                          variant_id: p.variant_id,
+                          variant_name: p.variant_name,
                         })}
                         className="w-full text-center rounded-lg border border-emerald/50 text-emerald text-[13px] md:text-sm font-bold py-2.5 hover:bg-emerald hover:border-emerald hover:text-cream transition-colors flex items-center justify-center"
                       >
@@ -256,7 +260,9 @@ export default function ShopGrid({ initialProducts, categories, selectedCategory
                             name: p.name,
                             price: p.price,
                             image_url: p.image_url,
-                            category_name: catName
+                            category_name: catName,
+                            variant_id: p.variant_id,
+                            variant_name: p.variant_name,
                           });
                           router.push('/checkout');
                         }}

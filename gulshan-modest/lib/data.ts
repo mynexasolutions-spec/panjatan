@@ -85,6 +85,10 @@ export const categories: Category[] = [
 
 export type Product = {
   id: string;
+  product_id: string;
+  slug: string;
+  variant_id: string;
+  variant_name: string;
   name: string;
   category: string;
   description?: string;
@@ -98,52 +102,72 @@ export type Product = {
 
 export const featuredProducts: Product[] = [
   {
-    id: "pachan-plus-chatni",
+    id: "11111111-1111-4111-8111-111111111111",
+    product_id: "11111111-1111-4111-8111-111111111111",
+    slug: "pachan-plus-chatni",
+    variant_id: "a1111111-1111-4111-8111-111111111111",
+    variant_name: "Default",
     name: "Pachan Plus Chatni",
     category: "Digestive Care",
     description: "Complete Digestive Care",
     price: 230,
-    image: "/products/pachan-plus-chatni.png",
+    image: "/image.png",
     rating: 5,
     reviewsCount: 240,
   },
   {
-    id: "pachan-plus-powder",
+    id: "22222222-2222-4222-8222-222222222222",
+    product_id: "22222222-2222-4222-8222-222222222222",
+    slug: "pachan-plus-powder",
+    variant_id: "a2222222-2222-4222-8222-222222222222",
+    variant_name: "Default",
     name: "Pachan Plus Powder",
     category: "Digestive Care",
     description: "Improves Digestion & Relief",
     price: 210,
-    image: "/products/pachan-plus-powder.png",
+    image: "/image.png",
     rating: 5,
     reviewsCount: 190,
   },
   {
-    id: "diabex-plus-capsule",
+    id: "33333333-3333-4333-8333-333333333333",
+    product_id: "33333333-3333-4333-8333-333333333333",
+    slug: "diabex-plus-capsule",
+    variant_id: "a3333333-3333-4333-8333-333333333333",
+    variant_name: "Default",
     name: "Diabex Plus Capsule",
     category: "Diabetes Care",
     description: "Helps Manage Blood Sugar",
     price: 290,
-    image: "/products/diabex-plus-capsule.png",
+    image: "/image.png",
     rating: 5,
     reviewsCount: 210,
   },
   {
-    id: "livoplus-capsule",
+    id: "44444444-4444-4444-8444-444444444444",
+    product_id: "44444444-4444-4444-8444-444444444444",
+    slug: "livoplus-capsule",
+    variant_id: "a4444444-4444-4444-8444-444444444444",
+    variant_name: "Default",
     name: "Livoplus Capsule",
     category: "Liver Care",
     description: "Supports Liver Health",
     price: 275,
-    image: "/products/livoplus-capsule.png",
+    image: "/image.png",
     rating: 5,
     reviewsCount: 180,
   },
   {
-    id: "rog-mukt-syrup",
+    id: "55555555-5555-4555-8555-555555555555",
+    product_id: "55555555-5555-4555-8555-555555555555",
+    slug: "rog-mukt-syrup",
+    variant_id: "a5555555-5555-4555-8555-555555555555",
+    variant_name: "Default",
     name: "Rog Mukt Syrup",
     category: "Immunity Booster",
     description: "Immunity Booster",
     price: 200,
-    image: "/products/rog-mukt-syrup.png",
+    image: "/image.png",
     rating: 5,
     reviewsCount: 160,
   },

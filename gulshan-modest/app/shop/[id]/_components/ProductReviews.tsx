@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Star, MessageCircle } from 'lucide-react'
 import { submitReview } from '@/actions/reviews'
+import { useCustomer } from '@/context/CustomerContext'
 
 interface Review {
   id: string
@@ -10,6 +11,7 @@ interface Review {
   comment: string | null
   created_at: string
   profiles: { full_name: string } | null
+  customer_name?: string | null
 }
 
 export default function ProductReviews({ 
@@ -24,6 +26,10 @@ export default function ProductReviews({
   const [comment, setComment] = useState('')
   const [isPending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const { customer, orders, isHydrated } = useCustomer()
+  const eligibleOrder = orders.find((order) =>
+    order.items.some((item) => item.productId === productId)
+  )
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,6 +39,11 @@ export default function ProductReviews({
       const formData = new FormData()
       formData.append('product_id', productId)
       formData.append('rating', rating.toString())
+      if (customer && eligibleOrder) {
+        formData.append('customer_name', customer.fullName)
+        formData.append('customer_phone', customer.phone)
+        formData.append('order_number', eligibleOrder.orderNumber)
+      }
       if (comment.trim()) {
         formData.append('comment', comment.trim())
       }
@@ -90,7 +101,7 @@ export default function ProductReviews({
                       <Star key={star} className={`w-3.5 h-3.5 ${star <= review.rating ? 'fill-gold' : 'fill-stone-100 text-stone-200'}`} />
                     ))}
                   </div>
-                  <span className="text-sm font-semibold text-ink ml-1">{review.profiles?.full_name || 'Anonymous'}</span>
+                  <span className="text-sm font-semibold text-ink ml-1">{review.customer_name || review.profiles?.full_name || 'Anonymous'}</span>
                   <span className="text-xs text-ink/40 ml-auto">{new Date(review.created_at).toLocaleDateString()}</span>
                 </div>
                 {review.comment && (
@@ -104,6 +115,11 @@ export default function ProductReviews({
         <div className="md:col-span-5">
           <div className="bg-cream/30 p-6 rounded-xl border border-cream-line">
             <h4 className="font-semibold text-ink mb-4">Write a Review</h4>
+            {isHydrated && !eligibleOrder && (
+              <p className="mb-4 rounded-lg bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+                Reviews are available after you place an order for this product on this device using your logged-in mobile number.
+              </p>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-ink/70 mb-2">Rating</label>
@@ -144,7 +160,7 @@ export default function ProductReviews({
 
               <button
                 type="submit"
-                disabled={isPending}
+                disabled={isPending || !eligibleOrder}
                 className="w-full py-2.5 bg-ink text-white text-sm font-medium rounded-xl hover:bg-gold transition-colors disabled:opacity-50"
               >
                 {isPending ? 'Submitting...' : 'Submit Review'}

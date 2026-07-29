@@ -1,16 +1,14 @@
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
 import { ReviewList } from './_components/ReviewList'
 import { redirect } from 'next/navigation'
-import { isAdminAuthenticated } from '@/lib/admin-session'
 
 export const metadata = {
   title: 'Reviews Management | Admin',
 }
 
 export default async function AdminReviewsPage() {
-  const supabase = await createClient()
-
-  if (!(await isAdminAuthenticated())) redirect('/admin/login')
+  const supabase = await requireAdminClient()
+  if (!supabase) redirect('/admin/login')
 
   // Fetch all reviews
   const { data: reviews } = await supabase

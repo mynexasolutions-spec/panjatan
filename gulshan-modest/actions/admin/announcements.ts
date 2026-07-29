@@ -1,11 +1,11 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { isAdminAuthenticated } from '@/lib/admin-session'
 
 export async function getAnnouncement() {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return null
   
   // Try to get the latest announcement
   const { data } = await supabase
@@ -19,10 +19,8 @@ export async function getAnnouncement() {
 }
 
 export async function saveAnnouncement(message: string, isActive: boolean) {
-  const supabase = await createClient()
-  
-  const isAdmin = await isAdminAuthenticated()
-  if (!isAdmin) return { success: false, error: 'Unauthorized' }
+  const supabase = await requireAdminClient()
+  if (!supabase) return { success: false, error: 'Unauthorized' }
 
   // Check if one exists
   const existing = await getAnnouncement()

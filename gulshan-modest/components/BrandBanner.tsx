@@ -24,7 +24,7 @@ export default function BrandBanner() {
 
             {/* Brand Title */}
             <h3 className="font-display font-bold text-2xl md:text-3xl tracking-[0.15em] text-emerald uppercase">
-              Gulshan Modest<span className="text-[10px] uppercase align-super font-medium">tm</span>
+              Panjatan Ayurveda<span className="text-[10px] uppercase align-super font-medium">tm</span>
             </h3>
 
             {/* Cursive Subtitle */}
@@ -51,7 +51,7 @@ export default function BrandBanner() {
           <div className="relative w-full h-[350px] md:h-[480px] lg:h-[520px] rounded-[32px] overflow-hidden shadow-soft border border-gold/15 bg-cream-deep">
             <Image
               src="/model-cream-hijab.png"
-              alt="Gulshan Modest Premium Wear"
+              alt="Panjatan Ayurveda"
               fill
               sizes="(max-width: 1024px) 100vw, 550px"
               className="object-cover object-center transition-all duration-700 hover:scale-[1.03]"

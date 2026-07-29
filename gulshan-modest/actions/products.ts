@@ -1,12 +1,20 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 export type ActionResult = {
   error?: string
   success?: boolean
+}
+
+async function authorizedClient(): Promise<
+  | { supabase: NonNullable<Awaited<ReturnType<typeof requireAdminClient>>> }
+  | { error: ActionResult }
+> {
+  const supabase = await requireAdminClient()
+  return supabase ? { supabase } : { error: { error: 'Unauthorized' } }
 }
 
 function slugify(text: string): string {
@@ -22,7 +30,7 @@ function slugify(text: string): string {
 // Resolves the color_group_id to store for a product, given the "group with"
 // selection from the admin form (another product's ID to share colors with).
 async function resolveColorGroupId(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: NonNullable<Awaited<ReturnType<typeof requireAdminClient>>>,
   groupWithProductId: string | null
 ): Promise<string | null> {
   if (!groupWithProductId) return null
@@ -51,7 +59,9 @@ export async function createProduct(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   const name = formData.get('name') as string
   const categoryId = formData.get('category_id') as string
@@ -71,12 +81,10 @@ export async function createProduct(
   }
 
   const slug = slugify(name)
-  const id = crypto.randomUUID()
-
   const { data: product, error } = await supabase.from('products').insert({
-    id,
     name,
     slug,
+    price: 0,
     category_id: categoryId || null,
     short_description: shortDescription || null,
     description: description || null,
@@ -107,7 +115,9 @@ export async function updateProduct(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   const id = formData.get('id') as string
   const name = formData.get('name') as string
@@ -163,7 +173,9 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   const { error } = await supabase.from('products').delete().eq('id', id)
 
@@ -181,7 +193,9 @@ export async function saveProductInformation(
   productId: string,
   items: { id?: string; label: string; value: string; display_order: number }[]
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   // Delete existing items and re-insert
   const { error: deleteError } = await supabase
@@ -221,7 +235,9 @@ export async function addProductImage(
   imageUrl: string,
   colorName?: string | null
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   // Get max sort_order
   const { data: maxSort } = await supabase
@@ -258,7 +274,9 @@ export async function addProductImage(
 }
 
 export async function deleteProductImage(imageId: string, productId: string): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   // Check if this is the featured image before deleting
   const { data: image } = await supabase
@@ -306,7 +324,9 @@ export async function setFeaturedImage(
   productId: string,
   imageUrl: string
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   const { error } = await supabase
     .from('products')
@@ -325,7 +345,9 @@ export async function reorderProductImages(
   productId: string,
   orderedIds: string[]
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   for (let i = 0; i < orderedIds.length; i++) {
     await supabase
@@ -344,7 +366,9 @@ export async function updateProductImageColor(
   productId: string,
   colorName: string
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
   const { error } = await supabase
     .from('product_images')
     .update({ color_name: colorName.trim() || null })
@@ -364,7 +388,9 @@ export async function createProductVariant(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   const productId = formData.get('product_id') as string
   const variantName = formData.get('variant_name') as string
@@ -404,7 +430,9 @@ export async function bulkCreateProductVariants(
     is_active: boolean
   }[]
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   if (!productId || variants.length === 0) {
     return { error: 'Invalid data' }
@@ -429,7 +457,9 @@ export async function updateProductVariant(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   const id = formData.get('id') as string
   const productId = formData.get('product_id') as string
@@ -466,7 +496,9 @@ export async function deleteProductVariant(
   id: string,
   productId: string
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   const { error } = await supabase.from('product_variants').delete().eq('id', id)
 
@@ -483,7 +515,9 @@ export async function saveProductFaqs(
   productId: string,
   items: { id?: string; question: string; answer: string; display_order: number }[]
 ): Promise<ActionResult> {
-  const supabase = await createClient()
+  const auth = await authorizedClient()
+  if ('error' in auth) return auth.error
+  const { supabase } = auth
 
   // Delete existing FAQs and re-insert
   const { error: deleteError } = await supabase

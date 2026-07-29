@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { featuredProducts as defaultFeatured } from "@/lib/data";
 import { Star, Leaf } from "lucide-react";
 import { useCart } from "@/context/CartContext";
@@ -13,13 +13,14 @@ export interface ProductsProps {
 }
 
 export default function Products({
-  products = defaultFeatured,
+  products,
   title = "Featured Products",
   subtitle,
 }: ProductsProps) {
   const { addToCart } = useCart();
 
-  const list = products && products.length > 0 ? products : defaultFeatured;
+  const allowDevMocks = process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_CMS_DEV_MOCKS === "true";
+  const list = products && products.length > 0 ? products : (allowDevMocks ? defaultFeatured : (products || []));
 
   return (
     <section className="py-16 md:py-24 bg-[#F8F6F0]">
@@ -37,6 +38,11 @@ export default function Products({
         </div>
 
         {/* 5-Column Grid */}
+        {list.length === 0 && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
+            Featured products are temporarily unavailable.
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 md:gap-6">
           {list.slice(0, 5).map((item, idx) => (
             <div
@@ -46,13 +52,9 @@ export default function Products({
               <div>
                 {/* Product Image */}
                 <div className="relative aspect-square bg-gradient-to-b from-[#F2F7F4] to-white border-b border-gray-100 overflow-hidden">
-                  {item.image && !item.image.startsWith("/") ? (
+                  {item.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
+                    <ProductCardImage src={item.image} alt={item.name} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <div className="w-24 h-24 rounded-2xl bg-[#0D3B23] text-white shadow-lg p-3 flex flex-col items-center justify-center text-center border-2 border-emerald-500/40">
@@ -110,7 +112,12 @@ export default function Products({
               {/* Add to cart Button */}
               <div className="p-4 pt-0">
                 <button
-                  onClick={() => addToCart(item)}
+                  onClick={() =>
+                    addToCart({
+                      ...item,
+                      image_url: item.image_url || item.image || "/image.png",
+                    })
+                  }
                   className="w-full py-2.5 rounded-lg bg-[#0A6C35] hover:bg-[#0D3B23] text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-colors"
                 >
                   ADD TO CART
@@ -132,5 +139,28 @@ export default function Products({
 
       </div>
     </section>
+  );
+}
+
+function ProductCardImage({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="w-24 h-24 rounded-2xl bg-[#0D3B23] text-white shadow-lg p-3 flex flex-col items-center justify-center text-center border-2 border-emerald-500/40">
+          <Leaf className="w-6 h-6 text-emerald-400 mb-1" />
+          <span className="text-[10px] font-bold uppercase tracking-wider leading-tight">{alt}</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setFailed(true)}
+      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+    />
   );
 }

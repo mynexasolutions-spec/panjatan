@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export type Coupon = {
@@ -23,7 +24,8 @@ export async function getCoupons() {
 }
 
 export async function createCoupon(coupon: Omit<Coupon, 'id' | 'created_at'>) {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return { success: false, error: 'Unauthorized' }
   const { error } = await supabase
     .from('coupons')
     .insert([{
@@ -39,7 +41,8 @@ export async function createCoupon(coupon: Omit<Coupon, 'id' | 'created_at'>) {
 }
 
 export async function deleteCoupon(id: string) {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return { success: false, error: 'Unauthorized' }
   const { error } = await supabase
     .from('coupons')
     .delete()

@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { requireAdminClient } from '@/lib/supabase/admin'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowLeft, User, MapPin, Package, CreditCard } from 'lucide-react'
@@ -16,7 +16,8 @@ export default async function AdminOrderDetailsPage({
 }) {
   const resolvedParams = await params
   const orderId = resolvedParams.id
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) redirect('/admin/login')
 
   // Fetch Order Details
   const { data: order, error: orderError } = await supabase
@@ -49,6 +50,8 @@ export default async function AdminOrderDetailsPage({
   if (!order) {
     notFound()
   }
+
+  const shippingAddress = order.shipping_address || order.addresses
 
   // order_items.product_id has no DB foreign key to products (some legacy/mock
   // rows may not resolve), so look products up separately rather than embedding.
@@ -103,9 +106,11 @@ export default async function AdminOrderDetailsPage({
                 Customer
               </h3>
               <div className="space-y-2 text-sm">
-                <p className="font-medium text-stone-900">{order.profiles?.full_name || 'Guest'}</p>
-                <p className="text-stone-600">{order.profiles?.email}</p>
-                {order.profiles?.phone && <p className="text-stone-600">{order.profiles.phone}</p>}
+                <p className="font-medium text-stone-900">{order.profiles?.full_name || order.customer_name || 'Guest'}</p>
+                {order.profiles?.email && <p className="text-stone-600">{order.profiles.email}</p>}
+                {(order.profiles?.phone || order.customer_phone) && (
+                  <p className="text-stone-600">+91 {order.profiles?.phone || order.customer_phone}</p>
+                )}
               </div>
             </div>
 
@@ -114,14 +119,14 @@ export default async function AdminOrderDetailsPage({
                 <MapPin className="w-5 h-5 text-stone-400" />
                 Shipping Address
               </h3>
-              {order.addresses ? (
+              {shippingAddress ? (
                 <div className="space-y-1 text-sm text-stone-600">
-                  <p className="font-medium text-stone-900 mb-1">{order.addresses.full_name}</p>
-                  <p>{order.addresses.address_line_1}</p>
-                  <p>{order.addresses.city}, {order.addresses.state} {order.addresses.postal_code}</p>
-                  <p className="mt-2 pt-2 border-t border-stone-100">Phone: {order.addresses.phone}</p>
-                  {order.addresses.alternate_phone && (
-                    <p>Alternate: {order.addresses.alternate_phone}</p>
+                  <p className="font-medium text-stone-900 mb-1">{shippingAddress.full_name}</p>
+                  <p>{shippingAddress.address_line_1}</p>
+                  <p>{shippingAddress.city}, {shippingAddress.state} {shippingAddress.postal_code}</p>
+                  <p className="mt-2 pt-2 border-t border-stone-100">Phone: {shippingAddress.phone}</p>
+                  {shippingAddress.alternate_phone && (
+                    <p>Alternate: {shippingAddress.alternate_phone}</p>
                   )}
                 </div>
               ) : (
@@ -230,6 +235,24 @@ export default async function AdminOrderDetailsPage({
                   <span className="font-medium text-stone-900">₹{order.shipping_cost}</span>
                 )}
               </div>
+              {Number(order.discount) > 0 && (
+                <div className="flex justify-between text-green-700">
+                  <span>Coupon Discount</span>
+                  <span className="font-medium">-₹{order.discount}</span>
+                </div>
+              )}
+              {Number(order.online_discount_amount) > 0 && (
+                <div className="flex justify-between text-green-700">
+                  <span>Online Demo Discount</span>
+                  <span className="font-medium">-₹{order.online_discount_amount}</span>
+                </div>
+              )}
+              {Number(order.cod_cost) > 0 && (
+                <div className="flex justify-between text-stone-600">
+                  <span>COD Charge</span>
+                  <span className="font-medium text-stone-900">₹{order.cod_cost}</span>
+                </div>
+              )}
               <div className="pt-3 border-t border-stone-200 flex justify-between items-center">
                 <span className="font-bold text-stone-900">Total</span>
                 <span className="text-xl font-bold text-orange-600">₹{order.total_amount}</span>
@@ -239,6 +262,11 @@ export default async function AdminOrderDetailsPage({
             <div className="mt-6 pt-6 border-t border-stone-200">
               <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Payment Method</p>
               <p className="text-sm font-medium text-stone-900">{order.payment_method}</p>
+              {order.payment_status === 'simulated' && (
+                <p className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800">
+                  Mock online payment. No card, UPI, bank details, or real charge were involved.
+                </p>
+              )}
             </div>
           </div>
 

@@ -18,7 +18,7 @@ export default async function CustomersPage() {
       <div>
         <h1 className="text-2xl font-bold text-stone-900">Customers</h1>
         <p className="mt-1 text-sm text-stone-500">
-          Manage your registered customers and their account status.
+          View registered accounts and device-based demo customer logins.
         </p>
       </div>
 
@@ -36,7 +36,7 @@ export default async function CustomersPage() {
         
         <div className="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-stone-500">Active Accounts</p>
+            <p className="text-sm font-medium text-stone-500">Active / Device Logins</p>
             <p className="text-3xl font-bold text-green-600 mt-1">{activeCustomers}</p>
           </div>
           <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center">

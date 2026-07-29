@@ -34,7 +34,7 @@ export default function Lookbook() {
               <div className="group lift relative aspect-[3/4] rounded-2xl md:rounded-[24px] overflow-hidden shadow-card border border-gold/15 bg-cream">
                 <Image
                   src={src}
-                  alt="Gulshan Modest community styling"
+                  alt="Panjatan Ayurveda products"
                   fill
                   sizes="(max-width: 768px) 50vw, 400px"
                   className="object-cover transition-transform duration-700 group-hover:scale-[1.05]"

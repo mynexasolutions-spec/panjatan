@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Reveal from "./Reveal";
-import { SITE } from "@/lib/data";
+import type { SiteSettings } from "@/lib/cms";
 import { submitInquiry } from "@/actions/contact";
 
-export default function Contact() {
+export default function Contact({ settings }: { settings: SiteSettings }) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -59,23 +59,23 @@ export default function Contact() {
                 </p>
 
                 <div className="space-y-8">
-                  <a href={`mailto:${SITE.email}`} className="flex items-start gap-4 group">
+                  <a href={`mailto:${settings.support_email}`} className="flex items-start gap-4 group">
                     <div className="w-12 h-12 rounded-full bg-emerald/50 flex items-center justify-center shrink-0 border border-gold/20 group-hover:bg-gold/20 transition-colors">
                       <svg className="w-5 h-5 text-gold-light" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                     </div>
                     <div>
                       <span className="text-[11px] uppercase tracking-wider text-gold-light/80 font-semibold block mb-1">Email Us</span>
-                      <p className="font-display font-medium text-cream text-[15px] group-hover:text-gold-light transition-colors break-all">{SITE.email}</p>
+                      <p className="font-display font-medium text-cream text-[15px] group-hover:text-gold-light transition-colors break-all">{settings.support_email}</p>
                     </div>
                   </a>
 
-                  <a href={`https://wa.me/${SITE.whatsapp}`} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 group">
+                  <a href={`https://wa.me/${settings.whatsapp_number}`} target="_blank" rel="noopener noreferrer" className="flex items-start gap-4 group">
                     <div className="w-12 h-12 rounded-full bg-emerald/50 flex items-center justify-center shrink-0 border border-gold/20 group-hover:bg-gold/20 transition-colors">
                       <svg className="w-5 h-5 text-gold-light" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                     </div>
                     <div>
                       <span className="text-[11px] uppercase tracking-wider text-gold-light/80 font-semibold block mb-1">WhatsApp / Call</span>
-                      <p className="font-display font-medium text-cream text-[15px] group-hover:text-gold-light transition-colors">{SITE.phone}</p>
+                      <p className="font-display font-medium text-cream text-[15px] group-hover:text-gold-light transition-colors">{settings.support_phone}</p>
                     </div>
                   </a>
                 </div>
@@ -83,7 +83,7 @@ export default function Contact() {
 
               <div className="relative z-10 mt-12 pt-10 border-t border-cream/10">
                 <span className="text-[11px] uppercase tracking-wider text-gold-light/80 font-semibold block mb-3">Studio Location</span>
-                <p className="font-display font-medium text-cream text-[15px] mb-4">{SITE.city}</p>
+                <p className="font-display font-medium text-cream text-[15px] mb-4">{settings.address}</p>
                 <div className="w-full h-32 rounded-xl overflow-hidden border border-cream/20">
                   <iframe 
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d224345.83923192776!2d77.06889754720782!3d28.52758200617607!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cfd5b347eb62d%3A0x52c2b7494e204dce!2sNew%20Delhi%2C%20Delhi!5e0!3m2!1sen!2sin!4v1709123456789!5m2!1sen!2sin" 

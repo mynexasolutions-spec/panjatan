@@ -1,13 +1,25 @@
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = "https://zzololnincjsrcekzteb.supabase.co";
-const SERVICE_ROLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6b2xvbG5pbmNqc3JjZWt6dGViIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDkwNzMyMSwiZXhwIjoyMTAwNDgzMzIxfQ.U3nykODJbLKzB8E6H4iI_oStNMbLE5bfVrDZsem9fbA";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const DATABASE_URL = process.env.DATABASE_URL;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_NAME = process.env.ADMIN_NAME || "Panjatan Admin";
+const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 
-const ADMIN_EMAIL    = "admin@panjatanayurveda.com";
-const ADMIN_PASSWORD = "Panjatan@Admin2026";
-const ADMIN_NAME     = "Panjatan Admin";
-const ADMIN_USER_ID  = "b5d855a9-6e11-45db-9620-324e216ba5bb"; // already confirmed
+if (
+  !SUPABASE_URL ||
+  !SERVICE_ROLE_KEY ||
+  !DATABASE_URL ||
+  !ADMIN_EMAIL ||
+  !ADMIN_PASSWORD ||
+  !ADMIN_USER_ID
+) {
+  throw new Error(
+    "Supabase, database, and admin environment variables are required."
+  );
+}
 
 const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -62,8 +74,7 @@ async function createTableViaPg() {
   const { Client } = pg;
 
   const client = new Client({
-    connectionString:
-      "postgresql://postgres.zzololnincjsrcekzteb:Panjatan%400302@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres",
+    connectionString: DATABASE_URL,
     ssl: { rejectUnauthorized: false },
   });
 

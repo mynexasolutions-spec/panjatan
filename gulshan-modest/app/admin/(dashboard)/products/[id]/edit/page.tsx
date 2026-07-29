@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { requireAdminClient } from '@/lib/supabase/admin'
+import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import ProductForm from '../../_components/ProductForm'
 import ProductInfoEditor from '../../_components/ProductInfoEditor'
@@ -17,7 +17,8 @@ export default async function EditProductPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) redirect('/admin/login')
 
   const [productRes, categoriesRes, otherProductsRes, infoRes, faqRes, variantsRes, imagesRes] = await Promise.all([
     supabase.from('products').select('*').eq('id', id).single(),

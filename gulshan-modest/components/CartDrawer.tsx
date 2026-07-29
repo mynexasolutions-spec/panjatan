@@ -17,7 +17,7 @@ export default function CartDrawer({ isOpen, onClose, shipping }: CartDrawerProp
   
   const flatRate = shipping?.flat_rate ?? 99
   const freeThreshold = shipping?.free_threshold ?? 1999
-  const codCharge = shipping?.cod_charge ?? 49
+  const codCharge = shipping?.cod_charge ?? 50
   const onlineDiscount = shipping?.online_discount ?? 5
 
   if (!isOpen) return null

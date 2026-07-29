@@ -1,18 +1,19 @@
 "use client";
 
 import React, { useState } from "react";
-import { testimonials as defaultTestimonials } from "@/lib/data";
-import { Star, ChevronLeft, ChevronRight, Quote } from "lucide-react";
+import { Star, ChevronLeft, ChevronRight } from "lucide-react";
+import type { HomepageSection } from "@/lib/cms";
 
-export default function Testimonials() {
+export default function Testimonials({ section }: { section: HomepageSection }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const testimonials = section.homepage_section_items || [];
 
   const prevSlide = () => {
-    setActiveIndex((prev) => (prev === 0 ? defaultTestimonials.length - 1 : prev - 1));
+    setActiveIndex((prev) => (prev === 0 ? Math.max(0, testimonials.length - 1) : prev - 1));
   };
 
   const nextSlide = () => {
-    setActiveIndex((prev) => (prev === defaultTestimonials.length - 1 ? 0 : prev + 1));
+    setActiveIndex((prev) => (prev === testimonials.length - 1 ? 0 : prev + 1));
   };
 
   return (
@@ -22,7 +23,7 @@ export default function Testimonials() {
         {/* Heading */}
         <div className="text-center max-w-xl mx-auto mb-12">
           <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#0D3B23]">
-            What Our Customers Say
+            {section.heading}
           </h2>
           <div className="w-12 h-1 bg-[#0A6C35] mx-auto rounded-full mt-3" />
         </div>
@@ -41,7 +42,7 @@ export default function Testimonials() {
 
           {/* Cards Display Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-            {defaultTestimonials.map((item, idx) => (
+            {testimonials.map((item, idx) => (
               <div
                 key={idx}
                 className="bg-[#F8F6F0] p-6 rounded-2xl border border-emerald-100/80 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative"
@@ -49,21 +50,21 @@ export default function Testimonials() {
                 <div>
                   {/* Rating Stars */}
                   <div className="flex text-amber-500 mb-3">
-                    {[...Array(5)].map((_, i) => (
+                    {[...Array(Number(item.metadata?.rating) || 5)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-current" />
                     ))}
                   </div>
 
                   {/* Quote text */}
                   <p className="text-gray-700 text-sm leading-relaxed italic">
-                    "{item.quote}"
+                    "{item.body}"
                   </p>
                 </div>
 
                 {/* Author Name */}
                 <div className="mt-6 pt-4 border-t border-gray-200/60">
                   <span className="font-bold text-[#0D3B23] text-sm block">
-                    – {item.name}
+                    – {item.title}
                   </span>
                 </div>
               </div>

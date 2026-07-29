@@ -3,7 +3,9 @@
 
 export type UserRole = 'customer' | 'admin'
 
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded'
+export type PaymentStatus = 'pending' | 'simulated' | 'paid' | 'failed' | 'refunded'
+
+export type PaymentMethod = 'cod' | 'online'
 
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
 
@@ -139,14 +141,18 @@ export interface Order {
   order_number: string
   user_id: string
   address_id: string | null
+  shipping_address: Omit<Address, 'id' | 'user_id' | 'is_default' | 'created_at' | 'updated_at'>
   subtotal: number
+  discount: number
   shipping_cost: number
+  cod_cost: number
+  online_discount_amount: number
   total_amount: number
+  currency_code: 'INR'
+  coupon_code: string | null
   payment_status: PaymentStatus
   order_status: OrderStatus
-  payment_method: string | null
-  razorpay_order_id: string | null
-  razorpay_payment_id: string | null
+  payment_method: PaymentMethod
   created_at: string
   updated_at: string
 }

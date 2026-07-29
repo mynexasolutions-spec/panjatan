@@ -1,268 +1,169 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { User, Phone, MapPin, CheckCircle, Package, Mail } from 'lucide-react'
-import { updateCustomerFullProfile } from '@/actions/profile'
+import { FormEvent, useEffect, useState } from 'react'
+import { CheckCircle, LogOut, MapPin, Package, Phone, User } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useCustomer } from '@/context/CustomerContext'
+import { LocalAddress, isValidIndianPhone } from '@/lib/local-customer'
 import { useToast } from '@/context/ToastContext'
 
-type CustomerProfile = {
-  fullName: string
-  phone: string
-  alternatePhone: string
-  street: string
-  city: string
-  state: string
-  zipCode: string
+const EMPTY_ADDRESS: LocalAddress = {
+  fullName: '',
+  phone: '',
+  alternatePhone: '',
+  street: '',
+  city: '',
+  state: '',
+  zipCode: '',
 }
 
-export default function ProfileManager({ adminProfile, orders = [] }: { adminProfile: any, orders?: any[] }) {
-  const [profile, setProfile] = useState<CustomerProfile>({
-    fullName: '',
-    phone: '',
-    alternatePhone: '',
-    street: '',
-    city: '',
-    state: '',
-    zipCode: '',
-  })
+export default function ProfileManager() {
+  const { customer, address, orders, isHydrated, logout, saveAddress, syncOrders } = useCustomer()
+  const [profile, setProfile] = useState<LocalAddress>(EMPTY_ADDRESS)
   const [saved, setSaved] = useState(false)
   const { showToast } = useToast()
+  const router = useRouter()
 
-  // Load profile data on mount
   useEffect(() => {
-    if (adminProfile) {
-      setProfile({
-        fullName: adminProfile.full_name || '',
-        phone: adminProfile.phone || '',
-        alternatePhone: adminProfile.alternatePhone || '',
-        street: adminProfile.street || '',
-        city: adminProfile.city || '',
-        state: adminProfile.state || '',
-        zipCode: adminProfile.zipCode || '',
-      })
-    } else if (typeof window !== 'undefined') {
-      const savedData = localStorage.getItem('gulshan-customer-profile')
-      if (savedData) {
-        try {
-          setProfile(JSON.parse(savedData))
-        } catch (e) {
-          console.error('Failed to parse profile data', e)
-        }
-      }
+    if (!isHydrated) return
+    if (!customer) {
+      router.replace('/login?returnTo=%2Fprofile')
+      return
     }
-  }, [adminProfile])
+    setProfile(address || { ...EMPTY_ADDRESS, fullName: customer.fullName, phone: customer.phone })
+    void syncOrders()
+  }, [address, customer, isHydrated, router, syncOrders])
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (adminProfile) {
-      const res = await updateCustomerFullProfile(profile)
-      if (res.error) {
-        showToast(res.error, 'error')
-        return
-      }
-    }
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('gulshan-customer-profile', JSON.stringify(profile))
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    }
+  if (!isHydrated || !customer) {
+    return <div className="rounded-2xl border border-cream-line bg-white p-8 text-center text-sm text-ink/60">Loading your local account…</div>
   }
 
-  const handleChange = (field: keyof CustomerProfile, value: string) => {
-    setProfile((prev) => ({ ...prev, [field]: value }))
+  const handleSave = (event: FormEvent) => {
+    event.preventDefault()
+    if (!profile.fullName.trim() || !profile.street.trim() || !profile.city.trim() || !profile.state.trim()) {
+      showToast('Please complete all required address fields.', 'error')
+      return
+    }
+    if (!/^\d{6}$/.test(profile.zipCode)) {
+      showToast('Please enter a valid 6-digit PIN code.', 'error')
+      return
+    }
+    if (profile.alternatePhone && !isValidIndianPhone(profile.alternatePhone)) {
+      showToast('Please enter a valid alternate Indian mobile number.', 'error')
+      return
+    }
+    saveAddress(profile)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
   }
+
+  const change = (field: keyof LocalAddress, value: string) =>
+    setProfile((current) => ({ ...current, [field]: value }))
 
   return (
     <div className="space-y-8">
-      {/* Form Card */}
-      <div className="bg-white rounded-2xl p-6 md:p-8 shadow-card border border-cream-line/75">
+      <div className="rounded-2xl border border-cream-line/75 bg-white p-6 shadow-card md:p-8">
+        <div className="mb-6 flex items-start justify-between gap-4 border-b border-cream-line/50 pb-5">
+          <div>
+            <p className="font-semibold text-ink">{customer.fullName}</p>
+            <p className="mt-1 text-sm text-ink/55">+91 {customer.phone} · stored on this device</p>
+          </div>
+          <button onClick={() => { logout(); router.replace('/login') }}
+            className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50">
+            <LogOut className="h-4 w-4" /> Logout
+          </button>
+        </div>
+
         <form onSubmit={handleSave} className="space-y-6">
           {saved && (
-            <div className="p-3.5 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm flex items-center gap-2 animate-fade-in">
-              <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
-              <span>Shipping address and profile saved successfully!</span>
+            <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-3.5 text-sm text-green-700">
+              <CheckCircle className="h-5 w-5" /> Address saved on this device.
             </div>
           )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
-                Full Name
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  value={profile.fullName}
-                  onChange={(e) => handleChange('fullName', e.target.value)}
-                  placeholder="e.g. Sumaiya Khan"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-[15px]"
-                />
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-ink/30" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
-                Email Address
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  disabled
-                  value={adminProfile?.email || ''}
-                  placeholder="e.g. customer@example.com"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-cream-line bg-cream/10 text-ink/50 cursor-not-allowed focus:outline-none text-[15px]"
-                />
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-ink/30" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
-                Phone Number
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  value={profile.phone}
-                  onChange={(e) => handleChange('phone', e.target.value)}
-                  placeholder="e.g. +91 98765 43210"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-[15px]"
-                />
-                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-ink/30" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
-                Alternate Phone Number <span className="text-ink/30 normal-case font-medium">(Optional)</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={profile.alternatePhone}
-                  onChange={(e) => handleChange('alternatePhone', e.target.value)}
-                  placeholder="e.g. +91 98765 43210"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-[15px]"
-                />
-                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-ink/30" />
-              </div>
-            </div>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <Field label="Full name" icon={<User className="h-4 w-4" />}>
+              <input required value={profile.fullName} onChange={(e) => change('fullName', e.target.value)}
+                className="field-input pl-10" />
+            </Field>
+            <Field label="Mobile number" icon={<Phone className="h-4 w-4" />}>
+              <input disabled value={`+91 ${customer.phone}`} className="field-input cursor-not-allowed bg-cream/20 pl-10 text-ink/55" />
+            </Field>
+            <Field label="Alternate phone (optional)" icon={<Phone className="h-4 w-4" />}>
+              <input inputMode="numeric" maxLength={10} value={profile.alternatePhone}
+                onChange={(e) => change('alternatePhone', e.target.value.replace(/\D/g, ''))}
+                className="field-input pl-10" />
+            </Field>
           </div>
-
-          <div className="border-t border-cream-line/50 pt-5 space-y-4">
-            <h3 className="text-sm font-semibold text-ink uppercase tracking-wider flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-gold" /> Default Shipping Address
+          <div className="space-y-4 border-t border-cream-line/50 pt-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-ink">
+              <MapPin className="h-4 w-4 text-gold" /> Default shipping address
             </h3>
-
-            <div>
-              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
-                Street Address
-              </label>
-              <input
-                type="text"
-                required
-                value={profile.street}
-                onChange={(e) => handleChange('street', e.target.value)}
-                placeholder="e.g. Apartment, Suite, Block number"
-                className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-[15px]"
-              />
-            </div>
-
+            <input required maxLength={150} value={profile.street} onChange={(e) => change('street', e.target.value)}
+              placeholder="House, street, locality" className="field-input" />
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
-                  City
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={profile.city}
-                  onChange={(e) => handleChange('city', e.target.value)}
-                  placeholder="e.g. New Delhi"
-                  className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-[15px]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
-                  State
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={profile.state}
-                  onChange={(e) => handleChange('state', e.target.value)}
-                  placeholder="e.g. Delhi"
-                  className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-[15px]"
-                />
-              </div>
+              <input required maxLength={50} value={profile.city} onChange={(e) => change('city', e.target.value)}
+                placeholder="City" className="field-input" />
+              <input required maxLength={50} value={profile.state} onChange={(e) => change('state', e.target.value)}
+                placeholder="State" className="field-input" />
             </div>
-
-            <div>
-              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
-                PIN Code / ZIP Code
-              </label>
-              <input
-                type="text"
-                required
-                value={profile.zipCode}
-                onChange={(e) => handleChange('zipCode', e.target.value)}
-                placeholder="e.g. 110001"
-                className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-[15px]"
-              />
-            </div>
+            <input required inputMode="numeric" maxLength={6} value={profile.zipCode}
+              onChange={(e) => change('zipCode', e.target.value.replace(/\D/g, ''))}
+              placeholder="6-digit PIN code" className="field-input" />
           </div>
-
-          <button
-            type="submit"
-            className="w-full py-3.5 px-4 bg-emerald text-cream font-body font-semibold rounded-full shadow-card hover:bg-emerald-deep transition-all duration-200"
-          >
-            Save Account Details
+          <button className="w-full rounded-full bg-emerald px-4 py-3.5 font-semibold text-cream transition hover:bg-emerald-deep">
+            Save address
           </button>
         </form>
       </div>
 
-      {/* Orders Card */}
-      <div className="bg-white rounded-2xl p-6 md:p-8 shadow-card border border-cream-line/75 space-y-4">
-        <h3 className="text-base font-semibold text-ink flex items-center gap-2">
-          <Package className="w-5 h-5 text-gold" /> Order History
+      <div className="space-y-4 rounded-2xl border border-cream-line/75 bg-white p-6 shadow-card md:p-8">
+        <h3 className="flex items-center gap-2 font-semibold text-ink">
+          <Package className="h-5 w-5 text-gold" /> Order history
         </h3>
-        {orders && orders.length > 0 ? (
-          <div className="space-y-4 mt-4">
-            {orders.map((order) => (
-              <div key={order.id} className="border border-cream-line rounded-xl p-4 flex justify-between items-center bg-cream/20">
-                <div>
-                  <div className="font-bold text-ink">Order #{order.order_number}</div>
-                  <div className="text-xs text-ink/60 mt-1">
-                    {(() => {
-                      const d = new Date(order.created_at)
-                      const day = d.getUTCDate()
-                      const month = d.getUTCMonth() + 1
-                      const year = d.getUTCFullYear()
-                      return `${day}/${month}/${year}`
-                    })()}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-emerald">₹{order.total_amount}</div>
-                  <div className="text-xs uppercase tracking-wider font-bold mt-1 text-ink/60 bg-cream border border-cream-line px-2 py-0.5 rounded-md inline-block">
-                    {order.order_status}
-                  </div>
-                </div>
+        {orders.length ? orders.map((order) => (
+          <div key={order.id} className="rounded-xl border border-cream-line bg-cream/20 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-bold text-ink">Order #{order.orderNumber}</p>
+                <p className="mt-1 text-xs text-ink/55">{new Date(order.createdAt).toLocaleDateString('en-IN')}</p>
+                <p className="mt-1 text-xs text-ink/55">{order.items.length} item{order.items.length === 1 ? '' : 's'} · {order.paymentMethod === 'cod' ? 'Cash on delivery' : 'Online demo'}</p>
               </div>
-            ))}
+              <div className="text-right">
+                <p className="font-semibold text-emerald">₹{order.total.toLocaleString('en-IN')}</p>
+                <span className="mt-2 inline-block rounded-md border border-cream-line bg-white px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-ink/60">
+                  {order.status}
+                </span>
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="text-center py-6 text-ink/50 text-sm">
-            No orders placed yet. Add items to your cart and enquiry to get started!
-          </div>
+        )) : (
+          <p className="py-6 text-center text-sm text-ink/50">No orders placed on this device yet.</p>
         )}
       </div>
+      <style jsx>{`
+        :global(.field-input) {
+          width: 100%;
+          border: 1px solid rgba(181, 159, 126, 0.35);
+          border-radius: 0.75rem;
+          padding: 0.7rem 1rem;
+          background: rgba(251, 247, 240, 0.2);
+          color: inherit;
+          outline: none;
+        }
+        :global(.field-input:focus) { border-color: #1e6645; box-shadow: 0 0 0 2px rgba(30, 102, 69, .12); }
+      `}</style>
     </div>
+  )
+}
+
+function Field({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-ink/60">{label}</span>
+      <span className="relative block">
+        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/30">{icon}</span>
+        {children}
+      </span>
+    </label>
   )
 }

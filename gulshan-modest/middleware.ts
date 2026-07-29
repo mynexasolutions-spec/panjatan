@@ -1,29 +1,48 @@
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { ADMIN_SESSION_COOKIE, verifyAdminToken } from '@/lib/admin-jwt'
+import {
+  CUSTOMER_SESSION_COOKIE,
+  verifyCustomerToken,
+} from '@/lib/customer-jwt'
 
 export async function middleware(request: NextRequest) {
-  const hasMockCookie = request.cookies.get('mock-admin-logged-in')?.value === 'true'
-  const hasCustomCookie = request.cookies.get('gulshan-user-session')?.value
-  
-  // Check if any supabase auth cookie exists (standard naming format is sb-<project-id>-auth-token)
-  const hasSupabaseCookie = request.cookies.getAll().some(
-    (c) => c.name.startsWith('sb-') && c.name.includes('-auth-token')
+  let response = NextResponse.next({ request })
+  const customerSession = await verifyCustomerToken(
+    request.cookies.get(CUSTOMER_SESSION_COOKIE)?.value
   )
 
-  const customerLoggedIn = hasMockCookie || hasSupabaseCookie || !!hasCustomCookie
+  let supabaseUser = null
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (supabaseUrl && supabaseKey && !supabaseUrl.includes('placeholder')) {
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          response = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    })
+    const { data } = await supabase.auth.getUser()
+    supabaseUser = data.user
+  }
 
-  // Protected paths
-  // Note: /checkout is intentionally not gated here — it collects the
-  // address and creates/logs the account inline as part of the form.
-  const isProtectedPath = request.nextUrl.pathname.startsWith('/account')
+  const pathname = request.nextUrl.pathname
+  const isProtectedPath = pathname.startsWith('/account')
   const isAdminPath =
-    request.nextUrl.pathname.startsWith('/admin') &&
-    request.nextUrl.pathname !== '/admin/login'
+    pathname.startsWith('/admin') && pathname !== '/admin/login'
 
   if (isAdminPath) {
-    const adminToken = request.cookies.get(ADMIN_SESSION_COOKIE)?.value
-    const adminSession = await verifyAdminToken(adminToken)
-
+    const adminSession = await verifyAdminToken(
+      request.cookies.get(ADMIN_SESSION_COOKIE)?.value
+    )
     if (!adminSession) {
       const url = request.nextUrl.clone()
       url.pathname = '/admin/login'
@@ -31,14 +50,14 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (isProtectedPath && !customerLoggedIn) {
+  if (isProtectedPath && !customerSession && !supabaseUser) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    url.searchParams.set('redirect', request.nextUrl.pathname)
+    url.searchParams.set('redirect', pathname)
     return NextResponse.redirect(url)
   }
 
-  return NextResponse.next()
+  return response
 }
 
 export const config = {

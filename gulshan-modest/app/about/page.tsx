@@ -1,15 +1,18 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import Story from "@/components/Story";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import BotanicalDivider from "@/components/BotanicalDivider";
+import CmsContentBlocks from "@/components/CmsContentBlocks";
+import { getContentPage } from "@/lib/cms";
 
 export const metadata = {
-  title: 'About Us | Gulshan Modest',
-  description: 'Learn about the story behind Gulshan Modest, rooted in modesty and grown with intention in Delhi NCR.',
+  title: 'About Us | Panjatan Ayurveda',
+  description: 'Learn about Panjatan Ayurveda and our commitment to safe, effective, and natural Ayurvedic healthcare.',
 }
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const page = await getContentPage('about');
+  if (!page) throw new Error('Published About content is missing.');
   return (
     <main className="overflow-x-hidden pt-[72px] md:pt-[84px] bg-cream min-h-screen flex flex-col">
       <Header />
@@ -21,14 +24,14 @@ export default function AboutPage() {
         <div className="relative z-10 text-center px-5">
           <div className="eyebrow justify-center inline-flex items-center gap-2 mb-3 text-gold-light">
             <span className="h-px w-6 bg-gold-light/50" />
-            Our Heritage
+            {page.eyebrow}
             <span className="h-px w-6 bg-gold-light/50" />
           </div>
           <h1 className="font-display font-semibold text-3xl md:text-5xl text-cream tracking-tight">
-            About Gulshan
+            {page.title}
           </h1>
           <p className="mt-4 text-cream/80 max-w-lg mx-auto text-sm md:text-base leading-relaxed">
-            A garden of modest fashion, crafted with care and designed for the modern woman.
+            {page.summary}
           </p>
         </div>
       </section>
@@ -36,8 +39,9 @@ export default function AboutPage() {
       <BotanicalDivider tone="emerald" />
 
       <div className="flex-1">
-        {/* We reuse the Story component which has the core information */}
-        <Story />
+        <div className="mx-auto max-w-3xl px-5 py-16 md:py-24">
+          <CmsContentBlocks blocks={page.blocks} />
+        </div>
       </div>
 
       <Footer />

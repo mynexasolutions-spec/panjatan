@@ -2,9 +2,10 @@
 
 import React from "react";
 import { Leaf, ShieldCheck, Ban, Award, CheckCircle, HeartHandshake } from "lucide-react";
+import type { HomepageSection } from "@/lib/cms";
 
-export default function WhyUs() {
-  const reasons = [
+export default function WhyUs({ section }: { section: HomepageSection }) {
+  const fallbackReasons = [
     {
       icon: Leaf,
       title: "100%",
@@ -36,6 +37,11 @@ export default function WhyUs() {
       subtitle: "Trust",
     },
   ];
+  const reasons = section.homepage_section_items?.map((item) => ({
+    title: item.title,
+    subtitle: item.subtitle,
+  })) || fallbackReasons;
+  const icons = [Leaf, ShieldCheck, Ban, Award, CheckCircle, HeartHandshake];
 
   return (
     <section className="py-16 md:py-20 bg-white">
@@ -44,7 +50,7 @@ export default function WhyUs() {
         {/* Section Heading */}
         <div className="text-center max-w-xl mx-auto mb-12">
           <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#0D3B23]">
-            Why Choose Panjatan Ayurveda?
+            {section.heading}
           </h2>
           <div className="w-12 h-1 bg-[#0A6C35] mx-auto rounded-full mt-3" />
         </div>
@@ -52,7 +58,7 @@ export default function WhyUs() {
         {/* 6 Icons Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
           {reasons.map((item, idx) => {
-            const Icon = item.icon;
+            const Icon = icons[idx % icons.length];
             return (
               <div
                 key={idx}

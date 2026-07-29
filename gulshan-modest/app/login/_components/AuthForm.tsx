@@ -1,259 +1,117 @@
 'use client'
 
-import React, { useState, useTransition } from 'react'
-import { sendEmailOtp, verifyEmailOtp } from '@/actions/auth'
-import { Loader2, User, Mail, ArrowRight, KeyRound, Check, Phone } from 'lucide-react'
+import { FormEvent, useState } from 'react'
+import { ArrowLeft, ArrowRight, KeyRound, Phone, User } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useCustomer } from '@/context/CustomerContext'
+import {
+  DEMO_OTP,
+  isValidCustomerName,
+  isValidIndianPhone,
+  normalizeIndianPhone,
+} from '@/lib/local-customer'
 
-export default function AuthForm({ redirectTo }: { redirectTo?: string }) {
-  const [mode, setMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN')
-  
-  // OTP Flow States
-  const [otpSent, setOtpSent] = useState(false)
-  const [otpEmail, setOtpEmail] = useState('')
-  const [otpFullName, setOtpFullName] = useState('')
-  const [otpPhone, setOtpPhone] = useState('')
-  const [otpCode, setOtpCode] = useState('')
-  
-  const [pending, startTransition] = useTransition()
+export default function AuthForm({ returnTo = '/' }: { returnTo?: string }) {
+  const router = useRouter()
+  const { customer, login } = useCustomer()
+  const [step, setStep] = useState<'DETAILS' | 'OTP'>('DETAILS')
+  const [fullName, setFullName] = useState(customer?.fullName || '')
+  const [phone, setPhone] = useState(customer?.phone || '')
+  const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [resendTimer, setResendTimer] = useState(0)
 
-  // Countdown timer for resending OTP
-  React.useEffect(() => {
-    if (resendTimer > 0) {
-      const interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1)
-      }, 1000)
-      return () => clearInterval(interval)
-    }
-  }, [resendTimer])
-
-  // Send OTP handler
-  const handleSendOtp = (e: React.FormEvent) => {
-    e.preventDefault()
+  const continueToOtp = (event: FormEvent) => {
+    event.preventDefault()
     setError('')
-    setSuccess('')
-
-    if (!otpEmail) {
-      setError('Please enter a valid email address.')
+    if (!isValidCustomerName(fullName)) {
+      setError('Please enter your full name (at least 2 characters).')
       return
     }
-
-    if (mode === 'REGISTER' && !otpFullName) {
-      setError('Please enter your full name.')
+    if (!isValidIndianPhone(phone)) {
+      setError('Enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.')
       return
     }
-
-    startTransition(async () => {
-      const res = await sendEmailOtp(otpEmail, mode, otpFullName)
-      if (res?.error) {
-        setError(res.error)
-      } else {
-        setOtpSent(true)
-        setResendTimer(60)
-        setSuccess(`A 6-digit verification code has been sent to ${otpEmail}`)
-      }
-    })
+    setPhone(normalizeIndianPhone(phone))
+    setStep('OTP')
   }
 
-  // Verify OTP handler
-  const handleVerifyOtp = (e: React.FormEvent) => {
-    e.preventDefault()
+  const verifyOtp = async (event: FormEvent) => {
+    event.preventDefault()
     setError('')
-    setSuccess('')
-
-    if (!otpCode || otpCode.length !== 6) {
-      setError('Please enter a valid 6-digit code.')
+    if (otp !== DEMO_OTP) {
+      setError('Incorrect OTP. Use the demo OTP 123456.')
       return
     }
-
-    startTransition(async () => {
-      const res = await verifyEmailOtp(otpEmail, otpCode, redirectTo, otpFullName, otpPhone)
-      if (res?.error) {
-        setError(res.error)
-      }
-    })
+    try {
+      await login(fullName, phone)
+      router.replace(returnTo)
+      router.refresh()
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Unable to log in.')
+    }
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Alert Messages */}
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        Demo login only — no SMS is sent. Use OTP <strong className="tracking-widest">123456</strong>.
+      </div>
       {error && (
-        <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100 flex items-start gap-2">
-          <span className="font-semibold mt-0.5">Oops!</span> 
-          <p>{error}</p>
+        <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">
+          {error}
         </div>
       )}
-
-      {success && (
-        <div className="p-3 bg-green-50 text-green-700 rounded-xl text-sm border border-green-100 flex items-start gap-2">
-          <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <p>{success}</p>
-        </div>
+      {step === 'DETAILS' ? (
+        <form onSubmit={continueToOtp} className="space-y-4" noValidate>
+          <div>
+            <label htmlFor="customer-name" className="mb-1.5 block text-sm font-medium text-ink/70">Full name</label>
+            <div className="relative">
+              <User className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink/35" />
+              <input id="customer-name" autoComplete="name" value={fullName}
+                onChange={(event) => setFullName(event.target.value)} maxLength={80}
+                className="w-full rounded-xl border border-cream-line bg-cream py-3 pl-11 pr-4 outline-none transition focus:border-gold"
+                placeholder="Your full name" autoFocus />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="customer-phone" className="mb-1.5 block text-sm font-medium text-ink/70">Mobile number</label>
+            <div className="flex rounded-xl border border-cream-line bg-cream focus-within:border-gold">
+              <span className="flex items-center border-r border-cream-line px-3 text-sm font-semibold text-ink/60">+91</span>
+              <div className="relative flex-1">
+                <Phone className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink/35" />
+                <input id="customer-phone" type="tel" inputMode="numeric" autoComplete="tel-national"
+                  value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))}
+                  className="w-full rounded-r-xl bg-transparent py-3 pl-11 pr-4 outline-none" placeholder="9876543210" />
+              </div>
+            </div>
+          </div>
+          <button className="flex w-full items-center justify-center gap-2 rounded-full bg-ink px-5 py-3.5 font-semibold text-cream transition hover:bg-gold hover:text-ink">
+            Continue <ArrowRight className="h-4 w-4" />
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={verifyOtp} className="space-y-4" noValidate>
+          <div className="text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald/10 text-emerald">
+              <KeyRound className="h-5 w-5" />
+            </div>
+            <p className="text-sm text-ink/60">Enter the 6-digit demo OTP for</p>
+            <p className="font-semibold text-ink">+91 {phone}</p>
+          </div>
+          <input aria-label="6-digit OTP" inputMode="numeric" autoComplete="one-time-code"
+            value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+            maxLength={6}
+            className="w-full rounded-xl border border-cream-line bg-cream px-4 py-3 text-center text-2xl font-bold tracking-[0.45em] outline-none focus:border-gold"
+            placeholder="123456" autoFocus />
+          <button className="flex w-full items-center justify-center gap-2 rounded-full bg-ink px-5 py-3.5 font-semibold text-cream transition hover:bg-gold hover:text-ink">
+            Verify & continue <ArrowRight className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => { setStep('DETAILS'); setOtp(''); setError('') }}
+            className="flex w-full items-center justify-center gap-2 py-2 text-sm font-medium text-ink/60 hover:text-ink">
+            <ArrowLeft className="h-4 w-4" /> Change details
+          </button>
+        </form>
       )}
-
-      {/* --- 100% OTP Authentication Flow --- */}
-      <div className="space-y-4">
-        {!otpSent ? (
-          <form onSubmit={handleSendOtp} className="space-y-4">
-            {mode === 'REGISTER' && (
-              <>
-                <div>
-                  <label htmlFor="otp_name" className="block text-sm font-medium text-ink/70 mb-1">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="otp_name"
-                      type="text"
-                      required
-                      value={otpFullName}
-                      onChange={(e) => setOtpFullName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-cream-line bg-cream focus:outline-none focus:border-gold transition-colors"
-                      placeholder="Ayesha Khan"
-                    />
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink/40" />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="otp_phone" className="block text-sm font-medium text-ink/70 mb-1">
-                    Phone Number
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="otp_phone"
-                      type="text"
-                      required
-                      maxLength={10}
-                      pattern="\d{10}"
-                      title="Please enter exactly 10 digits"
-                      value={otpPhone}
-                      onChange={(e) => setOtpPhone(e.target.value.replace(/\D/g, ''))}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-cream-line bg-cream focus:outline-none focus:border-gold transition-colors"
-                      placeholder="9876543210"
-                    />
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink/40" />
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div>
-              <label htmlFor="otp_email" className="block text-sm font-medium text-ink/70 mb-1">
-                Email Address
-              </label>
-              <div className="relative">
-                <input
-                  id="otp_email"
-                  type="email"
-                  required
-                  value={otpEmail}
-                  onChange={(e) => setOtpEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-cream-line bg-cream focus:outline-none focus:border-gold transition-colors"
-                  placeholder="you@example.com"
-                />
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink/40" />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={pending}
-              className="w-full py-3 px-4 bg-ink text-cream rounded-xl font-semibold hover:bg-gold transition-colors duration-300 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
-            >
-              {pending ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  {mode === 'LOGIN' ? 'Send Login OTP' : 'Send Registration OTP'}
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label htmlFor="otp_code" className="block text-sm font-medium text-ink/70">
-                  Enter Verification Code
-                </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOtpSent(false)
-                    setError('')
-                    setSuccess('')
-                  }}
-                  className="text-xs text-gold hover:underline font-semibold"
-                >
-                  Change Email
-                </button>
-              </div>
-              <div className="relative">
-                <input
-                  id="otp_code"
-                  type="text"
-                  required
-                  maxLength={6}
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  className="w-full pl-10 pr-4 py-3 tracking-widest text-center text-lg font-bold rounded-xl border border-cream-line bg-cream focus:outline-none focus:border-gold transition-colors"
-                  placeholder="123456"
-                />
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ink/40" />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={pending}
-              className="w-full py-3 px-4 bg-ink text-cream rounded-xl font-semibold hover:bg-gold transition-colors duration-300 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
-            >
-              {pending ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  Verify & {mode === 'LOGIN' ? 'Login' : 'Create Account'}
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-            
-            <div className="text-center mt-2">
-               <button
-                 type="button"
-                 onClick={handleSendOtp}
-                 disabled={pending || resendTimer > 0}
-                 className="text-xs text-ink/70 hover:text-gold transition-colors font-medium underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed"
-               >
-                 {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend verification code'}
-               </button>
-             </div>
-          </form>
-        )}
-      </div>
-
-      {/* Switch mode links */}
-      <div className="pt-4 border-t border-cream-line text-center">
-        <p className="text-sm text-ink/70">
-          {mode === 'LOGIN' ? "Don't have an account?" : "Already have an account?"}
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            setMode(mode === 'LOGIN' ? 'REGISTER' : 'LOGIN')
-            setOtpSent(false)
-            setError('')
-            setSuccess('')
-          }}
-          className="mt-1 font-semibold text-ink hover:text-gold transition-colors underline underline-offset-4 font-body"
-        >
-          {mode === 'LOGIN' ? 'Create an Account' : 'Login Here'}
-        </button>
-      </div>
     </div>
   )
 }

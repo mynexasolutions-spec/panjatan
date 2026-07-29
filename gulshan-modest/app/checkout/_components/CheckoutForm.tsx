@@ -1,17 +1,17 @@
 "use client"
 
-import React, { useState, useEffect, useTransition } from 'react'
+import React, { useState, useEffect, useRef, useTransition } from 'react'
 import { useCart } from '@/context/CartContext'
+import { useCustomer } from '@/context/CustomerContext'
 import { useToast } from '@/context/ToastContext'
 import { validateCoupon } from '@/actions/admin/coupons'
-import { processCheckout, verifyRazorpayPayment } from '@/actions/checkout'
-import { sendEmailOtp, verifyEmailOtp } from '@/actions/auth'
+import { processCheckout } from '@/actions/checkout'
 import { SITE } from '@/lib/data'
-import { Truck, Tag, CreditCard, ShoppingBag, ShieldCheck, CheckCircle2, Lock, Eye, EyeOff, Plus, Minus, X, Loader2 } from 'lucide-react'
+import { Truck, Tag, CreditCard, ShoppingBag, ShieldCheck, CheckCircle2, Plus, Minus, X, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import Script from 'next/script'
-import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+import { isValidIndianPhone, LocalAddress, LocalOrder } from '@/lib/local-customer'
 
 type ShippingSettings = {
   flat_rate: number
@@ -20,15 +20,16 @@ type ShippingSettings = {
   online_discount?: number
 }
 
-export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false }: { shipping: ShippingSettings, isLoggedIn: boolean, hasCoupons?: boolean }) {
+export default function CheckoutForm({ shipping, hasCoupons = false }: { shipping: ShippingSettings, hasCoupons?: boolean }) {
   const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } = useCart()
+  const { customer, address, isHydrated, saveAddress, addOrder } = useCustomer()
   const { showToast } = useToast()
+  const router = useRouter()
   const [pending, startTransition] = useTransition()
 
   // Shipping Address Form State
   const [profile, setProfile] = useState({
     fullName: '',
-    email: '',
     phone: '',
     alternatePhone: '',
     street: '',
@@ -37,51 +38,6 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
     zipCode: '',
   })
 
-  // OTP States for Guest Checkout
-  const [otpSent, setOtpSent] = useState(false)
-  const [otpCode, setOtpCode] = useState('')
-  const [otpPending, setOtpPending] = useState(false)
-  const [resendTimer, setResendTimer] = useState(60)
-  const [otpError, setOtpError] = useState('')
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout
-    if (otpSent && resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1)
-      }, 1000)
-    }
-    return () => clearInterval(interval)
-  }, [otpSent, resendTimer])
-
-  useEffect(() => {
-    if (otpSent) {
-      setResendTimer(60)
-    }
-  }, [otpSent])
-
-  // Temporarily lower header z-index and freeze scrolling when OTP modal is open
-  useEffect(() => {
-    const header = document.querySelector('header')
-    if (otpSent && !isLoggedIn) {
-      if (header) {
-        header.style.zIndex = '0'
-      }
-      document.body.style.overflow = 'hidden'
-    } else {
-      if (header) {
-        header.style.zIndex = ''
-      }
-      document.body.style.overflow = ''
-    }
-    return () => {
-      if (header) {
-        header.style.zIndex = ''
-      }
-      document.body.style.overflow = ''
-    }
-  }, [otpSent, isLoggedIn])
-
   // Coupon State
   const [couponCode, setCouponCode] = useState('')
   const [activeCoupon, setActiveCoupon] = useState<any>(null)
@@ -89,71 +45,25 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
   const [couponSuccess, setCouponSuccess] = useState('')
 
   // Payment Method
-  const [paymentMethod, setPaymentMethod] = useState<'Cash on Delivery' | 'Online Payment (Razorpay)'>('Cash on Delivery')
+  const [paymentMethod, setPaymentMethod] = useState<'Cash on Delivery' | 'Online Payment (Demo)'>('Cash on Delivery')
+  const checkoutIdempotencyKey = useRef<string | null>(null)
 
   // Success Modal State
   const [placedOrder, setPlacedOrder] = useState<any>(null)
 
-  // Prefill from localStorage on mount (Only if logged in)
+  // Prefill from the device-local customer and address.
   useEffect(() => {
-    if (typeof window !== 'undefined' && isLoggedIn) {
-      const savedData = localStorage.getItem('gulshan-customer-profile')
-      if (savedData) {
-        try {
-          const parsed = JSON.parse(savedData)
-          setProfile({
-            fullName: parsed.fullName || '',
-            email: parsed.email || '',
-            phone: parsed.phone || '',
-            alternatePhone: parsed.alternatePhone || '',
-            street: parsed.street || '',
-            city: parsed.city || '',
-            state: parsed.state || '',
-            zipCode: parsed.zipCode || '',
-          })
-        } catch (e) {
-          console.error(e)
-        }
-      }
-    }
-  }, [isLoggedIn])
-
-  // Load user profile and default address from database if logged in
-  useEffect(() => {
-    if (isLoggedIn) {
-      const supabase = createClient()
-      if (supabase) {
-        supabase.auth.getUser().then(async ({ data }) => {
-          if (data?.user) {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', data.user.id)
-              .single()
-              
-            const { data: addressData } = await supabase
-              .from('addresses')
-              .select('*')
-              .eq('user_id', data.user.id)
-              .order('is_default', { ascending: false })
-              .limit(1)
-              .maybeSingle()
-
-            setProfile({
-              fullName: profileData?.full_name || '',
-              email: data.user.email || '',
-              phone: addressData?.phone || profileData?.phone || '',
-              alternatePhone: addressData?.alternate_phone || '',
-              street: addressData?.address_line_1 || '',
-              city: addressData?.city || '',
-              state: addressData?.state || '',
-              zipCode: addressData?.postal_code || '',
-            })
-          }
-        }).catch((err) => console.error('Failed to load profile in checkout:', err))
-      }
-    }
-  }, [isLoggedIn])
+    if (!customer) return
+    setProfile({
+      fullName: address?.fullName || customer.fullName,
+      phone: customer.phone,
+      alternatePhone: address?.alternatePhone || '',
+      street: address?.street || '',
+      city: address?.city || '',
+      state: address?.state || '',
+      zipCode: address?.zipCode || '',
+    })
+  }, [address, customer])
 
   // Calculate checkout details
   const subtotal = cartTotal
@@ -170,7 +80,7 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
   }
 
   const onlineDiscountPercent = shipping.online_discount ?? 0
-  const onlineDiscountAmount = paymentMethod === 'Online Payment (Razorpay)'
+  const onlineDiscountAmount = paymentMethod === 'Online Payment (Demo)'
     ? Math.round((subtotal * onlineDiscountPercent) / 100)
     : 0
 
@@ -196,76 +106,74 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
     }
   }
 
-  const handleRazorpayPayment = async (orderData: any, addressString: string) => {
-    const options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Enter the Key ID generated from the Dashboard
-      amount: orderData.amount,
-      currency: "INR",
-      name: SITE.name,
-      description: "Order Payment",
-      order_id: orderData.razorpayOrderId,
-      handler: async function (response: any) {
-        const verifyRes = await verifyRazorpayPayment(
-          response.razorpay_payment_id,
-          response.razorpay_order_id,
-          response.razorpay_signature,
-          orderData.orderId
-        )
-        if (verifyRes.success) {
-          setPlacedOrder({
-            order_number: orderData.orderNumber,
-            id: orderData.orderId,
-            total: grandTotal,
-            items: [...cart],
-            shippingAddress: addressString
-          })
-          clearCart()
-        } else {
-          showToast('Payment verification failed. Please contact support.', 'error')
-        }
-      },
-      prefill: {
-        name: profile.fullName,
-        contact: profile.phone,
-      },
-      theme: {
-        color: "#1E3B2E" // Emerald
-      }
-    };
-    
-    // @ts-ignore
-    const rzp1 = new window.Razorpay(options);
-    rzp1.on('payment.failed', function (response: any){
-        showToast("Payment failed! Reason: " + response.error.description, "error");
-    });
-    rzp1.open();
-  }
-
   // Execute checkout and place order
   const executeOrderPlacement = async () => {
-    const addressString = `${profile.street}, ${profile.city}, ${profile.state} - ${profile.zipCode}`
-    const method = paymentMethod === 'Online Payment (Razorpay)' ? 'RAZORPAY' : 'COD'
+    if (!customer) {
+      router.push('/login?returnTo=%2Fcheckout')
+      return
+    }
+    const method = paymentMethod === 'Online Payment (Demo)' ? 'ONLINE' : 'COD'
+    checkoutIdempotencyKey.current ||= crypto.randomUUID()
 
-    // Save profile to localstorage on order place
-    localStorage.setItem('gulshan-customer-profile', JSON.stringify(profile))
+    const savedAddress: LocalAddress = {
+      fullName: profile.fullName,
+      phone: customer.phone,
+      alternatePhone: profile.alternatePhone,
+      street: profile.street,
+      city: profile.city,
+      state: profile.state,
+      zipCode: profile.zipCode,
+    }
+    saveAddress(savedAddress)
 
-    const res = await processCheckout(profile, cart, method)
+    const res = await processCheckout(
+      { ...profile, phone: customer.phone },
+      cart,
+      method,
+      activeCoupon?.code || '',
+      checkoutIdempotencyKey.current
+    )
 
     if (!res.success) {
       showToast(res.error || 'Failed to place order.', 'error')
     } else {
-      if (res.isRazorpay) {
-        handleRazorpayPayment(res, addressString)
-      } else {
-        setPlacedOrder({
-          order_number: res.order_number,
-          id: res.orderId,
-          total: grandTotal,
-          items: [...cart],
-          shippingAddress: addressString
-        })
-        clearCart()
+      const localOrder: LocalOrder = {
+        id: res.orderId,
+        orderNumber: res.order_number,
+        customerPhone: customer.phone,
+        createdAt: new Date().toISOString(),
+        currencyCode: res.currencyCode,
+        subtotal: res.subtotal,
+        discount: res.discount,
+        shipping: res.shipping,
+        codFee: res.codFee,
+        onlineDiscount: res.onlineDiscount,
+        total: res.total,
+        paymentMethod: res.paymentMethod,
+        paymentStatus: res.paymentStatus,
+        status: res.orderStatus,
+        shippingAddress: savedAddress,
+        items: cart.map((item) => ({
+          productId: item.id,
+          variantId: item.variant_id,
+          productName: item.name,
+          variantName: item.variant_name,
+          imageUrl: item.image_url,
+          price: item.price,
+          quantity: item.quantity,
+        })),
       }
+      addOrder(localOrder)
+      setPlacedOrder({
+        order_number: res.order_number,
+        id: res.orderId,
+        total: res.total,
+        paymentStatus: res.paymentStatus,
+        items: [...cart],
+        shippingAddress: `${profile.street}, ${profile.city}, ${profile.state} - ${profile.zipCode}`
+      })
+      checkoutIdempotencyKey.current = null
+      clearCart()
     }
   }
 
@@ -277,53 +185,19 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
       return
     }
 
-    if (!profile.fullName || !profile.email || !profile.phone || !profile.street || !profile.city || !profile.state || !profile.zipCode) {
-      showToast('Please fill out all shipping details.', 'error')
+    if (!isHydrated) return
+    if (!customer) {
+      router.push('/login?returnTo=%2Fcheckout')
       return
     }
 
-    if (!isLoggedIn) {
-      if (!otpSent) {
-        setOtpPending(true)
-        startTransition(async () => {
-          const res = await sendEmailOtp(profile.email, 'REGISTER', profile.fullName)
-          setOtpPending(false)
-          if (res?.error) {
-            showToast(res.error, 'error')
-          } else {
-            setOtpSent(true)
-            showToast('Verification code sent to ' + profile.email, 'success')
-          }
-        })
-        return
-      } else {
-        if (!otpCode || otpCode.length !== 6) {
-          showToast('Please enter a valid 6-digit verification code.', 'error')
-          return
-        }
-        setOtpPending(true)
-        startTransition(async () => {
-          const res = await verifyEmailOtp(profile.email, otpCode, 'NO_REDIRECT', profile.fullName, profile.phone)
-          if (res?.error) {
-            setOtpPending(false)
-            setOtpError(res.error)
-            showToast(res.error, 'error')
-          } else if (res?.success) {
-            try {
-              window.dispatchEvent(new Event('gulshan-login-status-change'))
-              await executeOrderPlacement()
-              setOtpSent(false)
-            } catch (e: any) {
-              showToast(e.message || 'Error processing checkout', 'error')
-            } finally {
-              setOtpPending(false)
-            }
-          } else {
-            setOtpPending(false)
-          }
-        })
-        return
-      }
+    if (!profile.fullName || !profile.phone || !profile.street || !profile.city || !profile.state || !profile.zipCode) {
+      showToast('Please fill out all shipping details.', 'error')
+      return
+    }
+    if (!isValidIndianPhone(profile.phone)) {
+      showToast('Please enter a valid 10-digit Indian mobile number.', 'error')
+      return
     }
 
     startTransition(async () => {
@@ -335,7 +209,7 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
   const getWhatsappLink = () => {
     if (!placedOrder) return ''
     const itemsText = placedOrder.items.map((i: any) => `- ${i.name} (x${i.quantity})`).join('\n')
-    const message = `Hi Gulshan Modest!\n\nI just placed an order:\nOrder Number: *${placedOrder.order_number}*\nItems:\n${itemsText}\nTotal Amount: *₹${placedOrder.total.toLocaleString('en-IN')}*\nPayment Method: *${paymentMethod}*\n\nShipping Address: ${placedOrder.shippingAddress}\n\nPlease confirm my order. Thank you!`
+    const message = `Hi Panjatan Ayurveda!\n\nI just placed an order:\nOrder Number: *${placedOrder.order_number}*\nItems:\n${itemsText}\nTotal Amount: *₹${placedOrder.total.toLocaleString('en-IN')}*\nPayment Method: *${paymentMethod}*\n\nShipping Address: ${placedOrder.shippingAddress}\n\nPlease confirm my order. Thank you!`
     return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(message)}`
   }
 
@@ -347,7 +221,7 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
         </div>
         <div>
           <h2 className="font-display font-bold text-2xl text-ink">Order Placed Successfully!</h2>
-          <p className="text-sm text-ink/60 mt-1">Thank you for shopping with Gulshan Modest.</p>
+          <p className="text-sm text-ink/60 mt-1">Thank you for shopping with Panjatan Ayurveda.</p>
         </div>
 
         <div className="p-4 bg-cream/40 rounded-2xl border border-cream-line/50 text-left space-y-3">
@@ -363,6 +237,12 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
             <span className="text-ink/50 uppercase font-semibold">Payment Method</span>
             <span className="font-bold text-ink">{paymentMethod}</span>
           </div>
+          {placedOrder.paymentStatus === 'simulated' && (
+            <p className="pt-3 border-t border-cream-line/50 text-xs text-ink/60 leading-relaxed">
+              This online payment was simulated. No card, UPI, or bank details
+              were requested and no real charge was made.
+            </p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -390,8 +270,7 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+      <form noValidate onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       {/* Left Column: Shipping Address & Payment Form */}
       <div className="lg:col-span-7 space-y-6">
         <div className="bg-white rounded-3xl p-6 md:p-8 border border-cream-line shadow-card space-y-6">
@@ -416,24 +295,6 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
             </div>
             <div>
               <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
-                Email Address
-              </label>
-              <input
-                type="email"
-                required
-                disabled={isLoggedIn}
-                value={profile.email}
-                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                placeholder="e.g. sumaiya@example.com"
-                className={`w-full px-4 py-2.5 rounded-xl border border-cream-line text-sm transition-all focus:outline-none ${
-                  isLoggedIn 
-                    ? 'bg-cream/10 text-ink/50 cursor-not-allowed' 
-                    : 'bg-cream/20 text-ink focus:ring-2 focus:ring-emerald/20 focus:border-emerald'
-                }`}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
                 Phone Number
               </label>
               <input
@@ -443,9 +304,9 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
                 pattern="\d{10}"
                 title="Please enter exactly 10 digits"
                 value={profile.phone}
-                onChange={(e) => setProfile({ ...profile, phone: e.target.value.replace(/\D/g, '') })}
+                disabled
                 placeholder="e.g. 9876543210"
-                className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-sm"
+                className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/10 text-ink/60 cursor-not-allowed text-sm"
               />
             </div>
             <div>
@@ -556,21 +417,23 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
             </label>
 
             <label className={`flex flex-col p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-              paymentMethod === 'Online Payment (Razorpay)'
+              paymentMethod === 'Online Payment (Demo)'
                 ? 'border-emerald bg-emerald/5'
                 : 'border-cream-line bg-white hover:border-cream-line-dark'
             }`}>
               <input
                 type="radio"
                 name="payment"
-                checked={paymentMethod === 'Online Payment (Razorpay)'}
-                onChange={() => setPaymentMethod('Online Payment (Razorpay)')}
+                checked={paymentMethod === 'Online Payment (Demo)'}
+                onChange={() => setPaymentMethod('Online Payment (Demo)')}
                 className="sr-only"
               />
               <span className="font-bold text-ink text-sm">
-                Online Payment {shipping.online_discount ? `(${shipping.online_discount}% Off)` : ''}
+                Online Payment (Demo) {shipping.online_discount ? `(${shipping.online_discount}% Off)` : ''}
               </span>
-              <span className="text-xs text-ink/50 mt-1">Pay securely via UPI, Cards, or Netbanking.</span>
+              <span className="text-xs text-ink/50 mt-1">
+                Simulates a successful payment. No payment details are requested or charged.
+              </span>
             </label>
           </div>
         </div>
@@ -686,17 +549,19 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
 
           <button
             type="submit"
-            disabled={pending || otpPending}
+            disabled={pending || !isHydrated}
             className="w-full py-4 px-6 bg-ink text-cream font-body font-bold rounded-full shadow-card hover:bg-gold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {pending || otpPending ? (
+            {pending ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <>
                 <ShoppingBag className="w-5 h-5" />
-                {isLoggedIn 
-                  ? `Place Order • ₹${grandTotal.toLocaleString('en-IN')}` 
-                  : (otpSent ? 'Confirm OTP & Place Order' : 'Verify Email & Place Order')}
+                {customer
+                  ? paymentMethod === 'Online Payment (Demo)'
+                    ? `Simulate Payment & Place Order • ₹${grandTotal.toLocaleString('en-IN')}`
+                    : `Place COD Order • ₹${grandTotal.toLocaleString('en-IN')}`
+                  : 'Log in to continue'}
               </>
             )}
           </button>
@@ -740,121 +605,6 @@ export default function CheckoutForm({ shipping, isLoggedIn, hasCoupons = false 
 
     </form>
 
-      {/* OTP Verification Modal */}
-      {!isLoggedIn && otpSent && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-2xl animate-fade-in">
-          <div className="bg-cream-deep max-w-md w-full rounded-3xl p-6 sm:p-8 border border-gold/30 shadow-soft text-center space-y-6 relative overflow-y-auto max-h-[90vh] sm:max-h-none">
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={() => setOtpSent(false)}
-              className="absolute right-4 top-4 p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 border border-red-100/50 transition-all duration-300 shadow-sm"
-              aria-label="Close modal"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="w-14 h-14 bg-gold/10 text-gold rounded-full flex items-center justify-center mx-auto border border-gold/20 shadow-inner">
-              <Lock className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-heading text-2xl font-bold text-ink">Confirm Verification Code</h3>
-              <p className="text-sm text-ink/75 mt-2 font-body px-1">
-                We sent a 6-digit OTP code to <strong className="text-ink font-semibold">{profile.email}</strong>. Please enter it below to verify your account and complete your order.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  maxLength={6}
-                  value={otpCode}
-                  onChange={(e) => {
-                    setOtpCode(e.target.value.replace(/\D/g, ''))
-                    setOtpError('')
-                  }}
-                  placeholder="123456"
-                  className="w-full px-4 py-3.5 rounded-xl border border-gold/30 bg-cream text-center tracking-[0.5em] font-heading font-bold text-2xl text-ink focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/10 transition-all shadow-inner"
-                />
-              </div>
-
-              {otpError && (
-                <div className="p-2.5 bg-red-50 text-red-600 rounded-xl text-xs border border-red-100/50 font-medium animate-pulse">
-                  {otpError}
-                </div>
-              )}
-
-              <div className="text-sm text-center font-body">
-                {resendTimer > 0 ? (
-                  <span className="text-ink/50 bg-cream/30 py-1 px-3 rounded-full border border-cream-line/30">
-                    Resend code in <strong className="text-gold font-bold">{resendTimer}s</strong>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setOtpPending(true)
-                      const res = await sendEmailOtp(profile.email, 'REGISTER', profile.fullName)
-                      setOtpPending(false)
-                      if (res?.error) {
-                        showToast(res.error, 'error')
-                      } else {
-                        setResendTimer(60)
-                        showToast('Verification code resent successfully.', 'success')
-                      }
-                    }}
-                    className="text-gold hover:text-gold-dark hover:underline font-semibold transition-colors duration-200"
-                  >
-                    Resend Verification Code
-                  </button>
-                )}
-              </div>
-
-              <div className="flex gap-2.5 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setOtpSent(false)}
-                  className="flex-1 py-2.5 px-3.5 sm:py-3 sm:px-4 bg-cream border border-cream-line text-ink rounded-xl font-semibold hover:bg-cream-deep transition-all duration-300 text-xs sm:text-sm shadow-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={otpPending || otpCode.length !== 6}
-                  onClick={() => {
-                    setOtpPending(true)
-                    startTransition(async () => {
-                      const res = await verifyEmailOtp(profile.email, otpCode, 'NO_REDIRECT', profile.fullName, profile.phone)
-                      if (res?.error) {
-                        setOtpPending(false)
-                        setOtpError(res.error)
-                        showToast(res.error, 'error')
-                      } else if (res?.success) {
-                        try {
-                          window.dispatchEvent(new Event('gulshan-login-status-change'))
-                          await executeOrderPlacement()
-                          setOtpSent(false)
-                        } catch (e: any) {
-                          showToast(e.message || 'Error processing checkout', 'error')
-                        } finally {
-                          setOtpPending(false)
-                        }
-                      } else {
-                        setOtpPending(false)
-                      }
-                    })
-                  }}
-                  className="flex-1 py-2.5 px-3.5 sm:py-3 sm:px-4 bg-ink hover:bg-gold text-cream hover:text-ink rounded-xl font-semibold transition-all duration-300 text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {otpPending ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : 'Verify & Order'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }

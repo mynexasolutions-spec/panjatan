@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { getAdminSession } from '@/lib/admin-session'
 
 /**
  * Creates a Supabase admin client with the service role key.
@@ -16,4 +17,16 @@ export function createAdminClient() {
       },
     }
   )
+}
+
+/**
+ * Returns a service-role client only after validating the signed, httpOnly
+ * Panjatan admin session. Server actions must use this helper rather than
+ * relying on the admin layout or a browser-supplied Supabase identity.
+ */
+export async function requireAdminClient() {
+  const session = await getAdminSession()
+  if (!session) return null
+
+  return createAdminClient()
 }

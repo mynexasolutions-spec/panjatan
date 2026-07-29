@@ -1,10 +1,11 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export async function getGlobalFaqs() {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return { success: false, error: 'Unauthorized' }
   const { data, error } = await supabase
     .from('global_faqs')
     .select('*')
@@ -19,7 +20,8 @@ export async function getGlobalFaqs() {
 }
 
 export async function addGlobalFaq(formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return { success: false, error: 'Unauthorized' }
   
   const question = formData.get('question')?.toString()
   const answer = formData.get('answer')?.toString()
@@ -58,7 +60,8 @@ export async function addGlobalFaq(formData: FormData) {
 }
 
 export async function updateGlobalFaq(id: string, formData: FormData) {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return { success: false, error: 'Unauthorized' }
   
   const question = formData.get('question')?.toString()
   const answer = formData.get('answer')?.toString()
@@ -83,7 +86,8 @@ export async function updateGlobalFaq(id: string, formData: FormData) {
 }
 
 export async function deleteGlobalFaq(id: string) {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return { success: false, error: 'Unauthorized' }
   
   const { error } = await supabase
     .from('global_faqs')
@@ -100,7 +104,8 @@ export async function deleteGlobalFaq(id: string) {
 }
 
 export async function updateGlobalFaqOrders(orders: { id: string; display_order: number }[]) {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return { success: false, error: 'Unauthorized' }
 
   // Supabase doesn't have a built-in bulk update for different values on same query cleanly via RPC without creating one.
   // We'll update them individually since it's a small array.

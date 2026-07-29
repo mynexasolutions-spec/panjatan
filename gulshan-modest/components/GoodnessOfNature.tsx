@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
-import { naturalIngredients } from "@/lib/data";
 import { Leaf } from "lucide-react";
+import type { HomepageSection } from "@/lib/cms";
 
-export default function GoodnessOfNature() {
+export default function GoodnessOfNature({ section }: { section: HomepageSection }) {
+  const ingredients = section.homepage_section_items || [];
   return (
     <section className="py-14 md:py-16 bg-[#0D3B23] text-white overflow-hidden relative">
       <div className="max-w-wrap mx-auto px-4 md:px-8">
@@ -13,15 +14,15 @@ export default function GoodnessOfNature() {
           {/* Left Text & CTA */}
           <div className="lg:col-span-4 space-y-5 text-left">
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold leading-tight text-white">
-              Goodness of Nature in Every Product
+              {section.heading}
             </h2>
             
             <div>
               <a
-                href="/shop"
+                href={section.link_url || "/shop"}
                 className="inline-flex items-center justify-center px-6 py-2.5 rounded-full border border-emerald-400/60 hover:bg-white hover:text-[#0D3B23] text-emerald-100 font-bold text-xs uppercase tracking-wider transition-all"
               >
-                EXPLORE INGREDIENTS
+                {section.link_label || "EXPLORE INGREDIENTS"}
               </a>
             </div>
           </div>
@@ -29,7 +30,7 @@ export default function GoodnessOfNature() {
           {/* Right Ingredient Circles Row */}
           <div className="lg:col-span-8">
             <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-6 overflow-x-auto no-scrollbar py-2">
-              {naturalIngredients.map((item, idx) => (
+              {ingredients.map((item, idx) => (
                 <div
                   key={idx}
                   className="flex flex-col items-center text-center shrink-0 group"
@@ -43,7 +44,7 @@ export default function GoodnessOfNature() {
                   
                   {/* Herb Name */}
                   <span className="text-xs font-semibold text-emerald-100 group-hover:text-white transition-colors">
-                    {item.name}
+                    {item.title}
                   </span>
                 </div>
               ))}

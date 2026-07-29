@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export type ProfileActionResult = {
@@ -9,7 +9,8 @@ export type ProfileActionResult = {
 }
 
 export async function getAdminProfile() {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return null
 
   // Fetch admin profile
   const { data: admin } = await supabase
@@ -20,7 +21,7 @@ export async function getAdminProfile() {
 
   return admin || {
     id: 'mock-admin-id',
-    email: 'admin@gulshanmodest.com',
+    email: 'admin@panjatanayurveda.com',
     full_name: 'Admin',
     phone: '+91 87964 59447'
   }
@@ -29,7 +30,8 @@ export async function getAdminProfile() {
 export async function updateAdminProfile(
   formData: FormData
 ): Promise<ProfileActionResult> {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return { error: 'Unauthorized' }
 
   const fullName = formData.get('fullName') as string
   const email = formData.get('email') as string

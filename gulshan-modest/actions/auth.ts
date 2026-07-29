@@ -3,8 +3,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { cookies } from 'next/headers'
 import { clearAdminSession, setAdminSession } from '@/lib/admin-session'
+import {
+  clearCustomerSession,
+  devMocksEnabled,
+  getCustomerSession,
+  setCustomerSession,
+} from '@/lib/customer-session'
 
 export type AuthResult = {
   error?: string
@@ -151,8 +156,8 @@ export async function sendEmailOtp(
   }
 
   const brevoApiKey = process.env.BREVO_API_KEY
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@gulshanmodest.com'
-  const senderName = process.env.BREVO_SENDER_NAME || 'Gulshan Modest'
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@panjatanayurveda.com'
+  const senderName = process.env.BREVO_SENDER_NAME || 'Panjatan Ayurveda'
 
   if (!brevoApiKey) {
     console.log(`[DEV MODE OTP] Email: ${email}, OTP: ${otp}`)
@@ -170,12 +175,12 @@ export async function sendEmailOtp(
       body: JSON.stringify({
         sender: { name: senderName, email: senderEmail },
         to: [{ email }],
-        subject: 'Your Verification Code - Gulshan Modest',
+        subject: 'Your Verification Code - Panjatan Ayurveda',
         htmlContent: `
           <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 32px; border: 1px solid #E6DAC4; border-radius: 24px; background-color: #FBF7F0; text-align: center; box-shadow: 0 4px 20px rgba(33,29,25,0.025);">
             <!-- Logo Header -->
             <div style="margin-bottom: 24px;">
-              <h1 style="color: #1E3B2E; font-size: 26px; font-weight: bold; letter-spacing: 2px; margin: 0; font-family: Georgia, serif;">GULSHAN MODEST</h1>
+              <h1 style="color: #1E3B2E; font-size: 26px; font-weight: bold; letter-spacing: 2px; margin: 0; font-family: Georgia, serif;">PANJATAN AYURVEDA</h1>
             </div>
             
             <hr style="border: 0; border-top: 1px solid #E6DAC4; margin: 24px 0;" />
@@ -203,7 +208,7 @@ export async function sendEmailOtp(
             
             <!-- Footer -->
             <p style="color: #B9893F; opacity: 0.7; font-size: 11px; margin: 0;">
-              &copy; ${new Date().getFullYear()} Gulshan Modest. All rights reserved.
+              &copy; ${new Date().getFullYear()} Panjatan Ayurveda. All rights reserved.
             </p>
           </div>
         `
@@ -259,17 +264,23 @@ export async function verifyEmailOtp(
   // OTP verified, delete it
   await supabase.from('email_otps').delete().eq('email', email)
 
-  const isMock = !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')
+  const isMock =
+    devMocksEnabled() &&
+    (!process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder'))
   if (isMock) {
-    const cookieStore = await cookies()
-    cookieStore.set('mock-admin-logged-in', 'true', { path: '/' })
-    
+    const mockUserId = crypto.randomUUID()
     await supabase.from('profiles').insert({
-      id: 'mock-user-' + Math.random().toString(36).substring(2, 9),
+      id: mockUserId,
       email,
       full_name: fullName || record.full_name || 'Customer',
       role: 'customer',
       phone: phone || null
+    })
+    await setCustomerSession({
+      id: mockUserId,
+      email,
+      full_name: fullName || record.full_name || 'Customer',
     })
 
     revalidatePath('/', 'layout')
@@ -370,17 +381,10 @@ export async function verifyEmailOtp(
     return { error: 'Failed to establish user profile session.' }
   }
 
-  const cookieStore = await cookies()
-  cookieStore.set('gulshan-user-session', JSON.stringify({
+  await setCustomerSession({
     id: finalProfile.id,
     email: finalProfile.email,
     full_name: finalProfile.full_name,
-    role: finalProfile.role
-  }), {
-    path: '/',
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 30 * 24 * 60 * 60 // 30 days
   })
 
   revalidatePath('/', 'layout')
@@ -422,6 +426,23 @@ export async function adminLogin(
   redirect('/admin')
 }
 
+export async function getCurrentCustomer() {
+  const session = await getCustomerSession()
+  if (session) {
+    return {
+      id: session.sub,
+      email: session.email,
+      user_metadata: {
+        role: session.role,
+        full_name: session.full_name,
+      },
+    }
+  }
+  const supabase = await createClient()
+  const { data } = await supabase.auth.getUser()
+  return data.user
+}
+
 export async function adminLogout() {
   await clearAdminSession()
   redirect('/admin/login')
@@ -430,6 +451,7 @@ export async function adminLogout() {
 export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
+  await clearCustomerSession()
   revalidatePath('/', 'layout')
   redirect('/login')
 }

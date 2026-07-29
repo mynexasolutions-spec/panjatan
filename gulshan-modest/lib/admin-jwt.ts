@@ -38,6 +38,9 @@ function base64UrlDecode(value: string) {
 }
 
 function getSigningSecret() {
+  if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_JWT_SECRET) {
+    throw new Error('ADMIN_JWT_SECRET must be configured in production')
+  }
   const secret = process.env.ADMIN_JWT_SECRET || process.env.ADMIN_PASSWORD
 
   if (!secret) {

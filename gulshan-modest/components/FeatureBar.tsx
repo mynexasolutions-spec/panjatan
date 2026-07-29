@@ -2,9 +2,10 @@
 
 import React from "react";
 import { Leaf, UserCheck, Shield, Truck } from "lucide-react";
+import type { HomepageSection } from "@/lib/cms";
 
-export default function FeatureBar() {
-  const features = [
+export default function FeatureBar({ section }: { section?: HomepageSection }) {
+  const fallbackFeatures = [
     {
       icon: Leaf,
       title: "Organic Herbs",
@@ -26,13 +27,18 @@ export default function FeatureBar() {
       subtitle: "Pan India",
     },
   ];
+  const features = section?.homepage_section_items?.map((item) => ({
+    title: item.title,
+    subtitle: item.subtitle,
+  })) || fallbackFeatures;
+  const icons = [Leaf, UserCheck, Shield, Truck];
 
   return (
     <section className="py-8 bg-white border-y border-emerald-100/60 shadow-sm relative z-20">
       <div className="max-w-wrap mx-auto px-4 md:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {features.map((item, index) => {
-            const Icon = item.icon;
+            const Icon = icons[index % icons.length];
             return (
               <div
                 key={index}

@@ -14,6 +14,8 @@ type Review = {
   created_at: string
   products: { name: string } | null
   profiles: { full_name: string; email: string } | null
+  customer_name?: string | null
+  customer_phone?: string | null
 }
 
 export function ReviewList({ initialReviews }: { initialReviews: Review[] }) {
@@ -90,8 +92,8 @@ export function ReviewList({ initialReviews }: { initialReviews: Review[] }) {
                   <div className="text-xs text-stone-500">ID: {review.product_id.substring(0, 8)}...</div>
                 </td>
                 <td className="p-4">
-                  <div className="font-medium text-stone-900">{review.profiles?.full_name || 'Anonymous'}</div>
-                  <div className="text-xs text-stone-500">{review.profiles?.email || ''}</div>
+                  <div className="font-medium text-stone-900">{review.customer_name || review.profiles?.full_name || 'Anonymous'}</div>
+                  <div className="text-xs text-stone-500">{review.profiles?.email || (review.customer_phone ? `+91 ${review.customer_phone}` : '')}</div>
                 </td>
                 <td className="p-4">
                   <div className="flex items-center gap-0.5">

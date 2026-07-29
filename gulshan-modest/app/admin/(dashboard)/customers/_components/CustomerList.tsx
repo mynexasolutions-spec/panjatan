@@ -2,11 +2,10 @@
 
 import { useState } from 'react'
 import { Search, UserX, UserCheck, Mail, Phone, Calendar } from 'lucide-react'
-import { toggleCustomerStatus } from '@/actions/admin/customers'
-import type { Profile } from '@/types/database'
+import { toggleCustomerStatus, type AdminCustomer } from '@/actions/admin/customers'
 
 interface CustomerListProps {
-  initialCustomers: Profile[]
+  initialCustomers: AdminCustomer[]
 }
 
 export default function CustomerList({ initialCustomers }: CustomerListProps) {
@@ -95,16 +94,20 @@ export default function CustomerList({ initialCustomers }: CustomerListProps) {
                             {customer.full_name}
                           </div>
                           <div className="text-sm text-stone-500 font-mono text-xs">
-                            ID: {customer.id.substring(0, 8)}...
+                            {customer.customer_type === 'device'
+                              ? `Device login${customer.order_count ? ` · ${customer.order_count} order${customer.order_count === 1 ? '' : 's'}` : ''}`
+                              : `ID: ${customer.id.substring(0, 8)}...`}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-stone-900 flex items-center gap-2 mb-1">
-                        <Mail className="w-3.5 h-3.5 text-stone-400" />
-                        {customer.email}
-                      </div>
+                      {customer.email && (
+                        <div className="text-sm text-stone-900 flex items-center gap-2 mb-1">
+                          <Mail className="w-3.5 h-3.5 text-stone-400" />
+                          {customer.email}
+                        </div>
+                      )}
                       <div className="text-sm text-stone-500 flex items-center gap-2">
                         <Phone className="w-3.5 h-3.5 text-stone-400" />
                         {customer.phone || 'N/A'}
@@ -124,11 +127,14 @@ export default function CustomerList({ initialCustomers }: CustomerListProps) {
                             : 'bg-red-100 text-red-800 border border-red-200'
                         }`}
                       >
-                        {customer.is_active ? 'Active' : 'Suspended'}
+                        {customer.customer_type === 'device'
+                          ? 'Device Login'
+                          : customer.is_active ? 'Active' : 'Suspended'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
+                      {customer.customer_type === 'account' ? (
+                        <button
                         onClick={() => handleToggleStatus(customer.id, customer.is_active)}
                         disabled={isLoading === customer.id}
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -145,7 +151,10 @@ export default function CustomerList({ initialCustomers }: CustomerListProps) {
                           <UserCheck className="w-4 h-4" />
                         )}
                         {customer.is_active ? 'Suspend' : 'Activate'}
-                      </button>
+                        </button>
+                      ) : (
+                        <span className="text-xs text-stone-400">Local demo account</span>
+                      )}
                     </td>
                   </tr>
                 ))

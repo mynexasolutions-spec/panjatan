@@ -4,10 +4,11 @@ import React, { useRef } from "react";
 import { categories as defaultCategories } from "@/lib/data";
 import { ChevronLeft, ChevronRight, Activity, Shield, Heart, HeartPulse, Stethoscope, Droplets, Sparkles, Wind, Flame } from "lucide-react";
 
-export default function Categories({ categories = defaultCategories }: { categories?: any[] }) {
+export default function Categories({ categories, title = "Shop by Health Category" }: { categories?: any[]; title?: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const list = categories.length > 0 ? categories : defaultCategories;
+  const allowDevMocks = process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_CMS_DEV_MOCKS === "true";
+  const list = categories && categories.length > 0 ? categories : (allowDevMocks ? defaultCategories : (categories || []));
 
   // Custom Icon mapping for health categories
   const getCategoryIcon = (id: string, index: number) => {
@@ -49,7 +50,7 @@ export default function Categories({ categories = defaultCategories }: { categor
         {/* Section Heading */}
         <div className="text-center max-w-xl mx-auto mb-10">
           <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#0D3B23]">
-            Shop by Health Category
+            {title}
           </h2>
           <div className="w-12 h-1 bg-[#0A6C35] mx-auto rounded-full mt-3" />
         </div>

@@ -1,14 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { isAdminAuthenticated } from '@/lib/admin-session'
+import { requireAdminClient } from '@/lib/supabase/admin'
 
 export async function getInquiries() {
-  const isAdmin = await isAdminAuthenticated()
-  if (!isAdmin) return []
-
-  const { createAdminClient } = await import('@/lib/supabase/admin')
-  const adminClient = createAdminClient()
+  const adminClient = await requireAdminClient()
+  if (!adminClient) return []
 
   const { data } = await adminClient
     .from('contact_inquiries')
@@ -19,11 +16,8 @@ export async function getInquiries() {
 }
 
 export async function markInquiryAsRead(id: string) {
-  const isAdmin = await isAdminAuthenticated()
-  if (!isAdmin) return { success: false, error: 'Unauthorized' }
-
-  const { createAdminClient } = await import('@/lib/supabase/admin')
-  const adminClient = createAdminClient()
+  const adminClient = await requireAdminClient()
+  if (!adminClient) return { success: false, error: 'Unauthorized' }
 
   const { error } = await adminClient
     .from('contact_inquiries')
@@ -37,11 +31,8 @@ export async function markInquiryAsRead(id: string) {
 }
 
 export async function deleteInquiry(id: string) {
-  const isAdmin = await isAdminAuthenticated()
-  if (!isAdmin) return { success: false, error: 'Unauthorized' }
-
-  const { createAdminClient } = await import('@/lib/supabase/admin')
-  const adminClient = createAdminClient()
+  const adminClient = await requireAdminClient()
+  if (!adminClient) return { success: false, error: 'Unauthorized' }
 
   const { error } = await adminClient
     .from('contact_inquiries')

@@ -138,7 +138,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const { data: reviewsData } = await supabase
     .from('reviews')
     .select(`
-      id, rating, comment, created_at,
+      id, rating, comment, created_at, customer_name,
       profiles:user_id ( full_name )
     `)
     .eq('product_id', productData.id)

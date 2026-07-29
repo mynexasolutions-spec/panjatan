@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
+import { redirect } from 'next/navigation'
 import {
   ShoppingCart,
   Users,
@@ -14,7 +15,8 @@ export const metadata: Metadata = {
 }
 
 async function getStats() {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) redirect('/admin/login')
 
   const [ordersRes, customersRes, productsRes, recentOrdersRes] =
     await Promise.all([

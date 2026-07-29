@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export type ShippingActionResult = {
@@ -40,7 +41,8 @@ export async function updateShippingSettings(
   codCharge: number,
   onlineDiscount: number
 ): Promise<ShippingActionResult> {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return { error: 'Unauthorized' }
 
   // Update shipping config inside settings table
   const { error } = await supabase

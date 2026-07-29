@@ -2,8 +2,9 @@
 
 import React from "react";
 import { ShieldCheck, Award, Leaf, Users, ArrowRight } from "lucide-react";
+import type { HomepageSection } from "@/lib/cms";
 
-export default function Hero({ slides }: { slides?: any[] }) {
+export default function Hero({ section }: { section?: HomepageSection }) {
   return (
     <section className="relative pt-[120px] md:pt-[150px] pb-12 md:pb-20 bg-gradient-to-b from-[#F2F7F4] via-[#F8FBF9] to-white overflow-hidden">
       {/* Background Subtle Leaf Accents */}
@@ -18,13 +19,12 @@ export default function Hero({ slides }: { slides?: any[] }) {
             
             {/* Title */}
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#0D3B23] tracking-tight leading-[1.12]">
-              Heal Naturally with <br className="hidden sm:inline" />
-              <span className="text-[#0A6C35]">Panjatan Ayurveda</span>
+              {section?.heading || "Heal Naturally with Panjatan Ayurveda"}
             </h1>
 
             {/* Subtitle */}
             <p className="text-gray-700 text-lg sm:text-xl font-medium max-w-xl leading-relaxed">
-              Pure Ayurvedic Medicines for a Healthy Today &amp; Better Tomorrow
+              {section?.subheading || "Pure Ayurvedic Medicines for a Healthy Today & Better Tomorrow"}
             </p>
 
             {/* Badges Grid */}
@@ -65,10 +65,10 @@ export default function Hero({ slides }: { slides?: any[] }) {
             {/* CTA Action Buttons */}
             <div className="flex flex-wrap items-center gap-4 pt-4">
               <a
-                href="/shop"
+                href={section?.link_url || "/shop"}
                 className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#0A6C35] hover:bg-[#0D3B23] text-white font-bold text-sm tracking-wide shadow-md transition-all transform hover:-translate-y-0.5"
               >
-                SHOP NOW
+                {section?.link_label || "SHOP NOW"}
               </a>
 
               <a

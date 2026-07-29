@@ -1,8 +1,18 @@
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = "https://zzololnincjsrcekzteb.supabase.co";
-const SERVICE_ROLE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6b2xvbG5pbmNqc3JjZWt6dGViIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDkwNzMyMSwiZXhwIjoyMTAwNDgzMzIxfQ.U3nykODJbLKzB8E6H4iI_oStNMbLE5bfVrDZsem9fbA";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const DATABASE_URL = process.env.DATABASE_URL;
+const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !DATABASE_URL || !CLOUDINARY_CLOUD_NAME) {
+  throw new Error(
+    "Supabase, database, and Cloudinary environment variables are required."
+  );
+}
+
+const productImage = (slug, format = "jpg") =>
+  `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/panjatan/products/${slug}-main.${format}`;
 
 const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -94,7 +104,7 @@ const products = [
     short_description: "Complete Digestive Care",
     price: 230,
     old_price: 280,
-    image_url: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&q=80",
+    image_url: productImage("pachan-plus-chatni"),
     badge: "Best Seller",
     rating: 5,
     reviews_count: 240,
@@ -110,7 +120,7 @@ const products = [
     short_description: "Improves Digestion & Relief",
     price: 210,
     old_price: 250,
-    image_url: "https://images.unsplash.com/photo-1587552132297-08c25ffb7085?w=500&q=80",
+    image_url: productImage("pachan-plus-powder", "webp"),
     badge: "Popular",
     rating: 5,
     reviews_count: 190,
@@ -126,7 +136,7 @@ const products = [
     short_description: "Helps Manage Blood Sugar",
     price: 290,
     old_price: 350,
-    image_url: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&q=80",
+    image_url: productImage("diabex-plus-capsule"),
     badge: "New",
     rating: 5,
     reviews_count: 210,
@@ -142,7 +152,7 @@ const products = [
     short_description: "Supports Liver Health",
     price: 275,
     old_price: 320,
-    image_url: "https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=500&q=80",
+    image_url: productImage("livoplus-capsule"),
     badge: "Top Rated",
     rating: 5,
     reviews_count: 180,
@@ -158,7 +168,7 @@ const products = [
     short_description: "Immunity Booster",
     price: 200,
     old_price: 240,
-    image_url: "https://images.unsplash.com/photo-1559181567-c3190bfa4f25?w=500&q=80",
+    image_url: productImage("rog-mukt-syrup", "webp"),
     badge: "Popular",
     rating: 5,
     reviews_count: 160,
@@ -174,7 +184,7 @@ const products = [
     short_description: "Stress Relief & Vitality",
     price: 249,
     old_price: 299,
-    image_url: "https://images.unsplash.com/photo-1471193945509-9ad0617afabf?w=500&q=80",
+    image_url: productImage("ashwagandha-capsule"),
     badge: null,
     rating: 4,
     reviews_count: 135,
@@ -190,7 +200,7 @@ const products = [
     short_description: "Reduces Hair Fall",
     price: 185,
     old_price: 220,
-    image_url: "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=500&q=80",
+    image_url: productImage("hair-growth-oil"),
     badge: null,
     rating: 4,
     reviews_count: 98,
@@ -206,7 +216,7 @@ const products = [
     short_description: "Clear & Glowing Skin",
     price: 150,
     old_price: 180,
-    image_url: "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&q=80",
+    image_url: productImage("neem-face-pack"),
     badge: null,
     rating: 4,
     reviews_count: 75,
@@ -222,8 +232,7 @@ const { default: pg } = await import("pg");
 const { Client } = pg;
 
 const client = new Client({
-  connectionString:
-    "postgresql://postgres.zzololnincjsrcekzteb:Panjatan%400302@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres",
+  connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 

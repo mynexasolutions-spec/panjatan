@@ -1,8 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { isAdminAuthenticated } from '@/lib/admin-session'
 
 export type ActionResult = {
   error?: string
@@ -14,9 +13,8 @@ export async function approveReview(
   formData: FormData
 ): Promise<ActionResult> {
   try {
-    const supabase = await createClient()
-
-    if (!(await isAdminAuthenticated())) {
+    const supabase = await requireAdminClient()
+    if (!supabase) {
       return { error: 'Unauthorized. Admin access required.' }
     }
 
@@ -81,9 +79,8 @@ export async function deleteReview(
   formData: FormData
 ): Promise<ActionResult> {
   try {
-    const supabase = await createClient()
-
-    if (!(await isAdminAuthenticated())) {
+    const supabase = await requireAdminClient()
+    if (!supabase) {
       return { error: 'Unauthorized. Admin access required.' }
     }
 

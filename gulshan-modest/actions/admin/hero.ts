@@ -1,11 +1,11 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
-import { isAdminAuthenticated } from '@/lib/admin-session'
 
 export async function getHeroSlides() {
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
+  if (!supabase) return []
   
   const { data } = await supabase
     .from('hero_slides')
@@ -17,9 +17,8 @@ export async function getHeroSlides() {
 }
 
 export async function createHeroSlide(imageUrl: string, position: 'left' | 'right' = 'right') {
-  const supabase = await createClient()
-  const isAdmin = await isAdminAuthenticated()
-  if (!isAdmin) return { success: false, error: 'Unauthorized' }
+  const supabase = await requireAdminClient()
+  if (!supabase) return { success: false, error: 'Unauthorized' }
 
   // Check limit per position
   const { count } = await supabase
@@ -49,9 +48,8 @@ export async function createHeroSlide(imageUrl: string, position: 'left' | 'righ
 }
 
 export async function deleteHeroSlide(id: string) {
-  const supabase = await createClient()
-  const isAdmin = await isAdminAuthenticated()
-  if (!isAdmin) return { success: false, error: 'Unauthorized' }
+  const supabase = await requireAdminClient()
+  if (!supabase) return { success: false, error: 'Unauthorized' }
 
   const { error } = await supabase
     .from('hero_slides')
@@ -66,9 +64,8 @@ export async function deleteHeroSlide(id: string) {
 }
 
 export async function toggleHeroSlideStatus(id: string, isActive: boolean) {
-  const supabase = await createClient()
-  const isAdmin = await isAdminAuthenticated()
-  if (!isAdmin) return { success: false, error: 'Unauthorized' }
+  const supabase = await requireAdminClient()
+  if (!supabase) return { success: false, error: 'Unauthorized' }
 
   const { error } = await supabase
     .from('hero_slides')
