@@ -68,7 +68,7 @@ export default function HeaderClient({ settings, navLinks }: { settings: SiteSet
         <div className={`transition-all duration-300 ${scrolled ? "shadow-md bg-white/95 backdrop-blur-md" : "bg-white"}`}>
           <div className="max-w-wrap mx-auto px-4 md:px-8 flex items-center justify-between h-[68px] md:h-[76px]">
             {/* Brand Logo */}
-            <a href="/" className="shrink-0">
+            <a href="/" className="shrink-0 transition-transform duration-300 hover:scale-[1.03] active:scale-95">
               <Image
                 src="/panjatan-logo.jpeg"
                 alt={settings.site_name}
@@ -96,7 +96,7 @@ export default function HeaderClient({ settings, navLinks }: { settings: SiteSet
             {/* Action Icons */}
             <div className="flex items-center gap-4 md:gap-5">
               {/* Search Toggle */}
-              <div className="relative">
+              <div className="relative hidden lg:block">
                 {showSearchInput ? (
                   <form onSubmit={handleSearch} className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center bg-gray-50 border border-gray-300 rounded-full px-3 py-1.5 shadow-sm z-10 w-60">
                     <input
@@ -117,7 +117,7 @@ export default function HeaderClient({ settings, navLinks }: { settings: SiteSet
                 ) : (
                   <button
                     onClick={() => setShowSearchInput(true)}
-                    className="p-2 text-gray-700 hover:text-[#0D3B23] transition-colors"
+                    className="p-2 text-gray-700 hover:text-[#0D3B23] transition-all duration-200 hover:scale-110 active:scale-90"
                     title="Search"
                   >
                     <Search className="w-5 h-5" />
@@ -128,7 +128,7 @@ export default function HeaderClient({ settings, navLinks }: { settings: SiteSet
               {/* User Account / Profile */}
               <a
                 href={customer ? "/profile" : "/login"}
-                className="p-2 text-gray-700 hover:text-[#0D3B23] transition-colors"
+                className="p-2 text-gray-700 hover:text-[#0D3B23] transition-all duration-200 hover:scale-110 active:scale-90"
                 title={customer ? `My Account — ${customer.fullName}` : "Login"}
               >
                 <User className="w-5 h-5" />
@@ -137,11 +137,11 @@ export default function HeaderClient({ settings, navLinks }: { settings: SiteSet
               {/* Cart Icon with Counter */}
               <button
                 onClick={() => setCartOpen(true)}
-                className="p-2 text-gray-700 hover:text-[#0D3B23] transition-colors relative"
+                className="p-2 text-gray-700 hover:text-[#0D3B23] transition-all duration-200 hover:scale-110 active:scale-90 relative"
                 title="Shopping Cart"
               >
                 <ShoppingBag className="w-5 h-5" />
-                <span className="absolute top-1 right-0.5 w-4 h-4 bg-[#0D3B23] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span key={cartCount} className="absolute top-1 right-0.5 w-4 h-4 bg-[#0D3B23] text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-fade-in">
                   {cartCount}
                 </span>
               </button>
@@ -149,10 +149,12 @@ export default function HeaderClient({ settings, navLinks }: { settings: SiteSet
               {/* Mobile Hamburger */}
               <button
                 onClick={() => setOpen(!open)}
-                className="lg:hidden p-2 text-gray-700 hover:text-[#0D3B23]"
+                className="lg:hidden p-2 text-gray-700 hover:text-[#0D3B23] transition-transform duration-200 active:scale-90"
                 aria-label="Toggle menu"
               >
-                {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                <span className="inline-flex transition-transform duration-300" style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}>
+                  {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </span>
               </button>
             </div>
           </div>

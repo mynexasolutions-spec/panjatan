@@ -148,6 +148,50 @@ export async function updateHomepageItem(formData: FormData): Promise<CmsActionR
   return { success: true }
 }
 
+export async function createHomepageItem(formData: FormData): Promise<CmsActionResult> {
+  const client = await authorizedClient()
+  if (!client) return { success: false, error: 'Unauthorized' }
+  const sectionId = text(formData, 'section_id')
+  const title = text(formData, 'title')
+  if (!sectionId) return { success: false, error: 'Section ID is required.' }
+  if (!title) return { success: false, error: 'Title is required.' }
+  let metadata: Record<string, unknown> = {}
+  try {
+    metadata = JSON.parse(text(formData, 'metadata') || '{}')
+  } catch {
+    return { success: false, error: 'Item metadata must be valid JSON.' }
+  }
+  const { error } = await client.from('homepage_section_items').insert({
+    section_id: sectionId,
+    title,
+    subtitle: text(formData, 'subtitle'),
+    body: text(formData, 'body'),
+    image_url: text(formData, 'image_url') || null,
+    link_url: text(formData, 'link_url') || null,
+    metadata,
+    is_visible: formData.get('is_visible') === 'on',
+    display_order: Math.max(0, Number(formData.get('display_order') || 0)),
+  })
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/')
+  revalidatePath('/herbs')
+  revalidatePath('/admin/content/home')
+  return { success: true }
+}
+
+export async function deleteHomepageItem(formData: FormData): Promise<CmsActionResult> {
+  const client = await authorizedClient()
+  if (!client) return { success: false, error: 'Unauthorized' }
+  const id = text(formData, 'id')
+  if (!id) return { success: false, error: 'Item ID is required.' }
+  const { error } = await client.from('homepage_section_items').delete().eq('id', id)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/')
+  revalidatePath('/herbs')
+  revalidatePath('/admin/content/home')
+  return { success: true }
+}
+
 export async function createNavigationLink(formData: FormData): Promise<CmsActionResult> {
   const client = await authorizedClient()
   if (!client) return { success: false, error: 'Unauthorized' }
@@ -210,6 +254,12 @@ export async function updateHomepageSectionForm(formData: FormData): Promise<voi
 }
 export async function updateHomepageItemForm(formData: FormData): Promise<void> {
   await updateHomepageItem(formData)
+}
+export async function createHomepageItemForm(formData: FormData): Promise<void> {
+  await createHomepageItem(formData)
+}
+export async function deleteHomepageItemForm(formData: FormData): Promise<void> {
+  await deleteHomepageItem(formData)
 }
 export async function createNavigationLinkForm(formData: FormData): Promise<void> {
   await createNavigationLink(formData)

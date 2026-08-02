@@ -24,13 +24,13 @@ export default async function AdminHeroSlidesPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
         {/* Left and Right Slides */}
-        <div className="xl:col-span-6">
+        {/* <div className="xl:col-span-6">
           <HeroSlideList 
             initialSlides={leftSlides} 
             position="left"
             title="Left Area Images"
           />
-        </div>
+        </div> */}
         <div className="xl:col-span-6">
           <HeroSlideList 
             initialSlides={rightSlides} 

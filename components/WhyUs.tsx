@@ -3,6 +3,7 @@
 import React from "react";
 import { Leaf, ShieldCheck, Ban, Award, CheckCircle, HeartHandshake } from "lucide-react";
 import type { HomepageSection } from "@/lib/cms";
+import Reveal from "./Reveal";
 
 export default function WhyUs({ section }: { section: HomepageSection }) {
   const fallbackReasons = [
@@ -48,32 +49,35 @@ export default function WhyUs({ section }: { section: HomepageSection }) {
       <div className="max-w-wrap mx-auto px-4 md:px-8">
         
         {/* Section Heading */}
-        <div className="text-center max-w-xl mx-auto mb-12">
+        <Reveal className="text-center max-w-xl mx-auto mb-12">
           <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#0D3B23]">
             {section.heading}
           </h2>
           <div className="w-12 h-1 bg-[#0A6C35] mx-auto rounded-full mt-3" />
-        </div>
+        </Reveal>
 
-        {/* 6 Icons Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
+        {/* 6 Reasons — airy icon list, deliberately lighter than the certification seals below */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-6">
           {reasons.map((item, idx) => {
             const Icon = icons[idx % icons.length];
             return (
-              <div
+              <Reveal
                 key={idx}
-                className="flex flex-col items-center text-center p-5 rounded-2xl bg-emerald-50/50 border border-emerald-100/80 hover:bg-emerald-100/60 hover:border-emerald-300 transition-all duration-300 group"
+                delay={(idx % 4) as 0 | 1 | 2 | 3}
+                className="flex flex-col items-center text-center group"
               >
-                <div className="w-16 h-16 rounded-full bg-white text-[#0A6C35] border border-emerald-200 shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <Icon className="w-8 h-8" />
+                <div className="relative w-14 h-14 flex items-center justify-center mb-3">
+                  <span className="absolute inset-0 rounded-full bg-emerald-50 scale-90 group-hover:scale-100 group-hover:bg-emerald-100 transition-all duration-300" />
+                  <Icon className="relative w-7 h-7 text-[#0A6C35] group-hover:scale-110 transition-transform duration-300" />
                 </div>
                 <h4 className="font-extrabold text-[#0D3B23] text-sm md:text-base leading-tight">
                   {item.title}
                 </h4>
-                <p className="text-xs text-gray-600 font-medium mt-0.5">
+                <p className="text-xs text-gray-500 font-medium mt-0.5">
                   {item.subtitle}
                 </p>
-              </div>
+                <span className="mt-2.5 h-[2px] w-6 bg-[#0A6C35]/40 group-hover:w-10 group-hover:bg-[#0A6C35] transition-all duration-300 rounded-full" />
+              </Reveal>
             );
           })}
         </div>

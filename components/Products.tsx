@@ -1,10 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
+import Reveal from "./Reveal";
+import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 export interface ProductsProps {
   products?: any[];
@@ -20,15 +22,45 @@ export default function Products({
 }: ProductsProps) {
   const { addToCart } = useCart();
   const router = useRouter();
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const list = products && products.length > 0 ? products : [];
+
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const cards = gsap.utils.toArray<HTMLElement>(".product-card", grid);
+    if (cards.length === 0) return;
+
+    // Even under reduced-motion we keep a soft opacity fade (no translate/scale) —
+    // fully static cards make it look like the feature is broken rather than
+    // intentionally toned down.
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fromVars = prefersReducedMotion
+      ? { opacity: 0 }
+      : { opacity: 0, y: 70, scale: 0.9 };
+    const toVars = prefersReducedMotion
+      ? { opacity: 1, duration: 0.4, stagger: 0.04, overwrite: true }
+      : { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "back.out(1.5)", stagger: 0.1, overwrite: true };
+
+    gsap.set(cards, fromVars);
+    const triggers = ScrollTrigger.batch(cards, {
+      start: "top 90%",
+      once: true,
+      onEnter: (batch) => gsap.to(batch, toVars),
+    });
+
+    return () => {
+      triggers.forEach((trigger) => trigger.kill());
+    };
+  }, [list.length]);
 
   return (
     <section className="py-16 md:py-24 bg-[#F8F6F0]">
       <div className="max-w-wrap mx-auto px-4 md:px-8">
         
         {/* Section Title */}
-        <div className="text-center max-w-xl mx-auto mb-12">
+        <Reveal className="text-center max-w-xl mx-auto mb-12">
           <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#0D3B23]">
             {title}
           </h2>
@@ -36,7 +68,7 @@ export default function Products({
             <p className="text-sm text-gray-600 font-medium mt-1">{subtitle}</p>
           )}
           <div className="w-12 h-1 bg-[#0A6C35] mx-auto rounded-full mt-3" />
-        </div>
+        </Reveal>
 
         {/* Empty State */}
         {list.length === 0 && (
@@ -45,12 +77,12 @@ export default function Products({
           </div>
         )}
 
-        {/* Product Grid — same as shop page */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+        {/* Product Grid — cards fly in on scroll via GSAP ScrollTrigger, see useEffect above */}
+        <div ref={gridRef} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
           {list.slice(0, 10).map((item: any, idx: number) => (
             <div
               key={item.id || idx}
-              className="lift group bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-sm hover:shadow-md border border-cream-line/80 flex flex-col"
+              className="product-card lift group bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-sm hover:shadow-md border border-cream-line/80 flex flex-col"
             >
               {/* Product Image */}
               <Link href={`/shop/${item.slug || item.id}`} className="relative aspect-[4/5] overflow-hidden block bg-cream-deep/20">
@@ -109,7 +141,7 @@ export default function Products({
                         variant_name: item.variant_name,
                       })
                     }
-                    className="w-full text-center rounded-lg border border-emerald/50 text-emerald text-[13px] md:text-sm font-bold py-2.5 hover:bg-emerald hover:border-emerald hover:text-cream transition-colors flex items-center justify-center"
+                    className="w-full text-center rounded-lg border border-emerald/50 text-emerald text-[13px] md:text-sm font-bold py-2.5 hover:bg-emerald hover:border-emerald hover:text-cream transition-all active:scale-95 flex items-center justify-center"
                   >
                     Add to cart
                   </button>
@@ -126,7 +158,7 @@ export default function Products({
                       });
                       router.push("/checkout");
                     }}
-                    className="w-full text-center rounded-lg bg-emerald text-cream text-[13px] md:text-sm font-bold py-2.5 hover:bg-emerald-deep transition-colors flex items-center justify-center shadow-sm"
+                    className="w-full text-center rounded-lg bg-emerald text-cream text-[13px] md:text-sm font-bold py-2.5 hover:bg-emerald-deep transition-all active:scale-95 flex items-center justify-center shadow-sm"
                   >
                     Buy now
                   </button>
@@ -140,7 +172,7 @@ export default function Products({
         <div className="text-center mt-12">
           <a
             href="/shop"
-            className="inline-flex items-center justify-center px-8 py-3.5 rounded-full border border-gray-400 text-gray-800 hover:bg-[#0D3B23] hover:text-white font-bold text-xs uppercase tracking-wider transition-all"
+            className="inline-flex items-center justify-center px-8 py-3.5 rounded-full border border-gray-400 text-gray-800 hover:bg-[#0D3B23] hover:text-white font-bold text-xs uppercase tracking-wider transition-all transform hover:-translate-y-0.5 hover:shadow-md active:scale-95"
           >
             VIEW ALL PRODUCTS
           </a>

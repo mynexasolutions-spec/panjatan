@@ -11,18 +11,38 @@
   --font-body: var(--jakarta);
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   background-color: #fbf7f0;
   color: #211d19;
   font-family: var(--font-body);
 }
 
-* {
+/* ---- Lenis smooth scroll ---- */
+/* Lenis drives scrolling itself; native smooth-behavior would fight it. */
+html.lenis {
+  height: auto;
+}
+html.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+/* Fallback for when JS/Lenis hasn't initialized yet, or reduced motion is on */
+html:not(.lenis) {
   scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 ::selection {
@@ -36,28 +56,39 @@ body {
   border-radius: 2px;
 }
 
-/* ---- Scroll reveal ---- */
+/* ---- Scroll reveal ----
+   The actual animation is driven imperatively by GSAP + ScrollTrigger
+   (see components/Reveal.tsx) rather than a CSS transition — this is just
+   the pre-JS/pre-paint hidden state so there's no flash of unstyled content
+   before the animation code takes over. */
 .reveal {
   opacity: 0;
-  transform: translateY(32px);
-  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(52px) scale(0.96);
   will-change: opacity, transform;
 }
 .reveal.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
-.reveal-delay-1 { transition-delay: 0.08s; }
-.reveal-delay-2 { transition-delay: 0.16s; }
-.reveal-delay-3 { transition-delay: 0.24s; }
-.reveal-delay-4 { transition-delay: 0.32s; }
+
+/* ---- Certification seal draw-in ring ----
+   Also GSAP-driven (see Certifications.tsx); this is just its pre-JS state. */
+.cert-ring {
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+}
+
+/* ---- Slow continuous rotation for SVG seals/rings ---- */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.spin-slow {
+  animation: spin-slow 22s linear infinite;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
+  .spin-slow {
+    animation: none;
   }
   html {
     scroll-behavior: auto;
@@ -127,6 +158,25 @@ body {
 }
 .lift:hover {
   transform: translateY(-7px);
+}
+
+/* ---- Floating WhatsApp gentle pulse ---- */
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.45); }
+  70% { box-shadow: 0 0 0 14px rgba(37, 211, 102, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+}
+.pulse-ring {
+  animation: pulse-ring 2.6s cubic-bezier(0.66, 0, 0, 1) infinite;
+}
+.pulse-ring:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-ring {
+    animation: none;
+  }
 }
 
 /* ---- Marquee track ---- */

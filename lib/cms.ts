@@ -107,6 +107,7 @@ const DEFAULT_NAVIGATION: NavigationLink[] = [
   { location: 'header', label: 'Home', href: '/', is_external: false, is_visible: true, display_order: 0 },
   { location: 'header', label: 'Products', href: '/shop', is_external: false, is_visible: true, display_order: 10 },
   { location: 'header', label: 'Categories', href: '/#categories', is_external: false, is_visible: true, display_order: 20 },
+  { location: 'header', label: 'Herbs', href: '/herbs', is_external: false, is_visible: true, display_order: 25 },
   { location: 'header', label: 'About Us', href: '/about', is_external: false, is_visible: true, display_order: 30 },
   { location: 'header', label: 'Contact', href: '/contact', is_external: false, is_visible: true, display_order: 40 },
   { location: 'footer', label: 'Home', href: '/', is_external: false, is_visible: true, display_order: 0 },
@@ -261,6 +262,41 @@ export async function getStorefrontShell(): Promise<StorefrontShell> {
     headerLinks: links.filter((link) => link.location === 'header'),
     footerLinks: links.filter((link) => link.location === 'footer'),
     legalLinks: links.filter((link) => link.location === 'legal'),
+  }
+}
+
+export async function getHomepageSectionByKey(sectionKey: string): Promise<HomepageSection | null> {
+  await connection()
+  const client = publicCmsClient()
+  if (!client) {
+    if (allowDevelopmentMocks()) return DEFAULT_HOMEPAGE_SECTIONS.find((section) => section.section_key === sectionKey) || null
+    throw configurationError()
+  }
+  let data
+  let error
+  try {
+    const result = await client
+      .from('homepage_sections')
+      .select('*, homepage_section_items(*)')
+      .eq('section_key', sectionKey)
+      .maybeSingle()
+    data = result.data
+    error = result.error
+  } catch (queryError) {
+    if (allowDevelopmentMocks()) return DEFAULT_HOMEPAGE_SECTIONS.find((section) => section.section_key === sectionKey) || null
+    throw queryError
+  }
+  if (error) {
+    if (allowDevelopmentMocks()) return DEFAULT_HOMEPAGE_SECTIONS.find((section) => section.section_key === sectionKey) || null
+    throw new Error(`Unable to load homepage section "${sectionKey}": ${error.message}`)
+  }
+  if (!data) return null
+  const section = data as HomepageSection
+  return {
+    ...section,
+    homepage_section_items: (section.homepage_section_items || [])
+      .filter((item) => item.is_visible)
+      .sort((a, b) => a.display_order - b.display_order),
   }
 }
 

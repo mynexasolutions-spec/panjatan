@@ -1,6 +1,6 @@
 import { requireAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { updateHomepageItemForm, updateHomepageSectionForm } from '@/actions/admin/cms'
+import { updateHomepageItemForm, updateHomepageSectionForm, createHomepageItemForm, deleteHomepageItemForm } from '@/actions/admin/cms'
 import CmsSubmitButton from '@/components/admin/CmsSubmitButton'
 
 export default async function HomepageContentPage() {
@@ -41,6 +41,34 @@ export default async function HomepageContentPage() {
             <div className="flex items-center justify-between"><label className="text-sm"><input name="is_visible" type="checkbox" defaultChecked={item.is_visible} /> Visible</label><CmsSubmitButton label="Save item" /></div>
           </form>
         ))}
+        <details className="ml-4 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/40 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-emerald-800">+ Add new item</summary>
+          <form action={createHomepageItemForm} className="mt-3 grid gap-3 sm:grid-cols-3">
+            <input type="hidden" name="section_id" value={section.id} />
+            <input name="title" required placeholder="Item title" className="rounded-lg border px-3 py-2" />
+            <input name="subtitle" placeholder="Subtitle" className="rounded-lg border px-3 py-2" />
+            <input name="display_order" type="number" min="0" defaultValue={((section.homepage_section_items || []).length) * 10} className="rounded-lg border px-3 py-2" />
+            <textarea name="body" placeholder="Body / benefits" rows={2} className="rounded-lg border px-3 py-2 sm:col-span-2" />
+            <input name="image_url" placeholder="Image URL" className="rounded-lg border px-3 py-2" />
+            <input name="link_url" placeholder="Link URL" className="rounded-lg border px-3 py-2" />
+            <input name="metadata" defaultValue="{}" placeholder="Metadata JSON" className="rounded-lg border px-3 py-2 font-mono text-xs" />
+            <div className="flex items-center justify-between"><label className="text-sm"><input name="is_visible" type="checkbox" defaultChecked /> Visible</label><CmsSubmitButton label="Add item" /></div>
+          </form>
+        </details>
+        {(section.homepage_section_items || []).length > 0 && (
+          <details className="ml-4 rounded-xl border border-dashed border-red-200 bg-red-50/40 p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-red-700">Remove an item</summary>
+            <div className="mt-3 space-y-2">
+              {(section.homepage_section_items || []).sort((a: any, b: any) => a.display_order - b.display_order).map((item: any) => (
+                <form key={item.id} action={deleteHomepageItemForm} className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white px-3 py-2">
+                  <input type="hidden" name="id" value={item.id} />
+                  <span className="text-sm text-stone-700">{item.title}</span>
+                  <button className="text-xs font-semibold text-red-700 hover:underline">Delete</button>
+                </form>
+              ))}
+            </div>
+          </details>
+        )}
         </div>
       ))}
     </div>

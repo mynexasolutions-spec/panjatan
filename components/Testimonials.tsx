@@ -3,6 +3,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Star, ChevronLeft, ChevronRight } from "lucide-react";
 import type { HomepageSection } from "@/lib/cms";
+import Reveal from "./Reveal";
 
 export default function Testimonials({ section }: { section: HomepageSection }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -36,12 +37,12 @@ export default function Testimonials({ section }: { section: HomepageSection }) 
       <div className="max-w-wrap mx-auto px-4 md:px-8">
         
         {/* Heading */}
-        <div className="text-center max-w-xl mx-auto mb-12">
+        <Reveal className="text-center max-w-xl mx-auto mb-12">
           <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#0D3B23]">
             {section.heading}
           </h2>
           <div className="w-12 h-1 bg-[#0A6C35] mx-auto rounded-full mt-3" />
-        </div>
+        </Reveal>
 
         {/* Swipeable Carousel */}
         <div className="relative max-w-5xl mx-auto">
@@ -50,7 +51,7 @@ export default function Testimonials({ section }: { section: HomepageSection }) 
           {canScrollLeft && (
             <button
               onClick={() => scroll("left")}
-              className="absolute -left-4 md:-left-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-[#0A6C35] text-white flex items-center justify-center shadow-lg hover:bg-[#0D3B23] transition-colors"
+              className="absolute -left-4 md:-left-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-[#0A6C35] text-white flex items-center justify-center shadow-lg hover:bg-[#0D3B23] hover:scale-110 active:scale-90 transition-all animate-fade-in"
               aria-label="Previous testimonial"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -59,7 +60,7 @@ export default function Testimonials({ section }: { section: HomepageSection }) 
           {canScrollRight && (
             <button
               onClick={() => scroll("right")}
-              className="absolute -right-4 md:-right-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-[#0A6C35] text-white flex items-center justify-center shadow-lg hover:bg-[#0D3B23] transition-colors"
+              className="absolute -right-4 md:-right-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-[#0A6C35] text-white flex items-center justify-center shadow-lg hover:bg-[#0D3B23] hover:scale-110 active:scale-90 transition-all animate-fade-in"
               aria-label="Next testimonial"
             >
               <ChevronRight className="w-5 h-5" />
@@ -73,9 +74,10 @@ export default function Testimonials({ section }: { section: HomepageSection }) 
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {testimonials.map((item, idx) => (
-              <div
+              <Reveal
                 key={idx}
-                className="snap-start shrink-0 w-[80vw] sm:w-[340px] md:w-[360px] bg-[#F8F6F0] p-6 rounded-2xl border border-emerald-100/80 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow"
+                delay={(idx % 4) as 0 | 1 | 2 | 3}
+                className="snap-start shrink-0 w-[80vw] sm:w-[340px] md:w-[360px] bg-[#F8F6F0] p-6 rounded-2xl border border-emerald-100/80 shadow-sm flex flex-col justify-between hover:shadow-md hover:-translate-y-1 transition-all"
               >
                 <div>
                   {/* Rating Stars */}
@@ -97,7 +99,7 @@ export default function Testimonials({ section }: { section: HomepageSection }) 
                     – {item.title}
                   </span>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
 

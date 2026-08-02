@@ -54,6 +54,19 @@ export type DbProduct = {
   }[];
 };
 
+export type DbHeroSlide = {
+  id: string;
+  image_url: string;
+  title: string | null;
+  subtitle: string | null;
+  button_text: string | null;
+  button_link: string | null;
+  text_mode: string;
+  position: "left" | "right";
+  is_active: boolean;
+  display_order: number;
+};
+
 // ─── Fetchers ────────────────────────────────────────────────────────────────
 
 export async function fetchCategories(): Promise<DbCategory[]> {
@@ -105,6 +118,22 @@ export async function fetchFeaturedProducts(): Promise<DbProduct[]> {
     product_images: (imagesResult.data || []).filter((image) => String(image.product_id) === String(product.id)),
     product_variants: (variantsResult.data || []).filter((variant) => String(variant.product_id) === String(product.id)),
   }));
+}
+
+export async function fetchHeroSlides(): Promise<DbHeroSlide[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("hero_slides")
+    .select("*")
+    .eq("is_active", true)
+    .order("position", { ascending: true })
+    .order("display_order", { ascending: true });
+
+  if (error) {
+    console.error("[fetchHeroSlides] Supabase error:", error.message);
+    return [];
+  }
+  return data ?? [];
 }
 
 export async function fetchAllProducts(): Promise<DbProduct[]> {

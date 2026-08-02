@@ -10,8 +10,8 @@ import Testimonials from "@/components/Testimonials";
 import Certifications from "@/components/Certifications";
 import Footer from "@/components/Footer";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
-import { fetchCategories, fetchFeaturedProducts, DbCategory, DbProduct } from "@/lib/queries";
-import { getHomepageSections } from "@/lib/cms";
+import { fetchCategories, fetchFeaturedProducts, fetchHeroSlides, DbCategory, DbProduct } from "@/lib/queries";
+import { getHomepageSections, getStorefrontShell } from "@/lib/cms";
 
 // Convert DB types to the shapes our components expect
 function toComponentCategory(c: DbCategory) {
@@ -50,21 +50,24 @@ function toComponentProduct(p: DbProduct) {
 
 export default async function Home() {
   // Fetch live from Supabase in parallel
-  const [dbCategories, dbProducts, homepageSections] = await Promise.all([
+  const [dbCategories, dbProducts, homepageSections, shell, heroSlides] = await Promise.all([
     fetchCategories(),
     fetchFeaturedProducts(),
     getHomepageSections(),
+    getStorefrontShell(),
+    fetchHeroSlides(),
   ]);
 
   const categories = dbCategories.map(toComponentCategory);
   const featuredProducts = dbProducts.map(toComponentProduct).filter((product) => !!product.variant_id);
+  const heroRightSlides = heroSlides.filter((slide) => slide.position === "right");
   return (
     <main className="min-h-screen bg-[#F8F6F0] overflow-x-hidden text-gray-900">
       <Header />
       {homepageSections.map((section) => {
         switch (section.section_key) {
           case 'hero':
-            return <Hero key={section.id} section={section} />;
+            return <Hero key={section.id} section={section} heroSlides={heroRightSlides} />;
           case 'feature-bar':
             return <FeatureBar key={section.id} section={section} />;
           case 'story':
@@ -76,7 +79,7 @@ export default async function Home() {
           case 'why-us':
             return <WhyUs key={section.id} section={section} />;
           case 'goodness-of-nature':
-            return <GoodnessOfNature key={section.id} section={section} />;
+            return <GoodnessOfNature key={section.id} section={section} settings={shell.settings} />;
           case 'testimonials':
             return <Testimonials key={section.id} section={section} />;
           case 'certifications':

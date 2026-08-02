@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { Leaf, Award, PackageCheck, Sparkles, Smile } from "lucide-react";
 import type { HomepageSection } from "@/lib/cms";
+import Reveal from "./Reveal";
 
 export default function Story({ section }: { section?: HomepageSection }) {
   return (
@@ -12,7 +13,7 @@ export default function Story({ section }: { section?: HomepageSection }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
           
           {/* Left Column: About Image */}
-          <div className="lg:col-span-5">
+          <Reveal className="lg:col-span-5">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white aspect-[4/3] sm:aspect-square group">
               <Image
                 src="/about-panjatan.webp"
@@ -35,11 +36,11 @@ export default function Story({ section }: { section?: HomepageSection }) {
                 </p>
               </div>
             </div>
-          </div>
+          </Reveal>
 
           {/* Right Column: Narrative & Stats Grid */}
-          <div className="lg:col-span-7 space-y-6">
-            
+          <Reveal delay={1} className="lg:col-span-7 space-y-6">
+
             {/* Tagline Header */}
             <div className="inline-flex items-center gap-2 text-emerald-700 text-xs md:text-sm font-bold uppercase tracking-widest bg-emerald-50 px-3.5 py-1.5 rounded-full border border-emerald-200">
               <Leaf className="w-4 h-4" /> About Panjatan Ayurveda
@@ -57,7 +58,7 @@ export default function Story({ section }: { section?: HomepageSection }) {
 
             {/* 4 Stats Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
-              <div className="bg-white p-4 rounded-2xl border border-emerald-100/80 shadow-sm text-center">
+              <div className="bg-white p-4 rounded-2xl border border-emerald-100/80 shadow-sm text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
                 <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-700 mx-auto flex items-center justify-center mb-2">
                   <Award className="w-5 h-5" />
                 </div>
@@ -65,7 +66,7 @@ export default function Story({ section }: { section?: HomepageSection }) {
                 <div className="text-xs text-gray-600 font-medium mt-1">Years of Trust</div>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-emerald-100/80 shadow-sm text-center">
+              <div className="bg-white p-4 rounded-2xl border border-emerald-100/80 shadow-sm text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
                 <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-700 mx-auto flex items-center justify-center mb-2">
                   <PackageCheck className="w-5 h-5" />
                 </div>
@@ -73,7 +74,7 @@ export default function Story({ section }: { section?: HomepageSection }) {
                 <div className="text-xs text-gray-600 font-medium mt-1">Ayurvedic Products</div>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-emerald-100/80 shadow-sm text-center">
+              <div className="bg-white p-4 rounded-2xl border border-emerald-100/80 shadow-sm text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
                 <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-700 mx-auto flex items-center justify-center mb-2">
                   <Leaf className="w-5 h-5" />
                 </div>
@@ -81,7 +82,7 @@ export default function Story({ section }: { section?: HomepageSection }) {
                 <div className="text-xs text-gray-600 font-medium mt-1">Natural Ingredients</div>
               </div>
 
-              <div className="bg-white p-4 rounded-2xl border border-emerald-100/80 shadow-sm text-center">
+              <div className="bg-white p-4 rounded-2xl border border-emerald-100/80 shadow-sm text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
                 <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-700 mx-auto flex items-center justify-center mb-2">
                   <Smile className="w-5 h-5" />
                 </div>
@@ -94,13 +95,13 @@ export default function Story({ section }: { section?: HomepageSection }) {
             <div className="pt-2">
               <a
                 href={section?.link_url || "/about"}
-                className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#0A6C35] hover:bg-[#0D3B23] text-white font-bold text-sm tracking-wide shadow-md transition-all"
+                className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#0A6C35] hover:bg-[#0D3B23] text-white font-bold text-sm tracking-wide shadow-md transition-all transform hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
               >
                 {section?.link_label || "KNOW MORE ABOUT US"}
               </a>
             </div>
 
-          </div>
+          </Reveal>
 
         </div>
       </div>

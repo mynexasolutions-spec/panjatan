@@ -4,6 +4,7 @@ import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { CustomerProvider } from "@/context/CustomerContext";
+import SmoothScrollProvider from "@/components/SmoothScrollProvider";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -46,13 +47,15 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${jakarta.variable} ${bricolage.variable}`}>
       <body className="font-body bg-cream text-ink antialiased">
-        <ToastProvider>
-          <CustomerProvider>
-            <CartProvider>
-              {children}
-            </CartProvider>
-          </CustomerProvider>
-        </ToastProvider>
+        <SmoothScrollProvider>
+          <ToastProvider>
+            <CustomerProvider>
+              <CartProvider>
+                {children}
+              </CartProvider>
+            </CustomerProvider>
+          </ToastProvider>
+        </SmoothScrollProvider>
       </body>
     </html>
   );

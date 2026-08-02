@@ -3,6 +3,7 @@
 import React, { useRef } from "react";
 import { categories as defaultCategories } from "@/lib/data";
 import { ChevronLeft, ChevronRight, Activity, Shield, Heart, HeartPulse, Stethoscope, Droplets, Sparkles, Wind, Flame } from "lucide-react";
+import Reveal from "./Reveal";
 
 export default function Categories({ categories, title = "Shop by Health Category" }: { categories?: any[]; title?: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -48,20 +49,20 @@ export default function Categories({ categories, title = "Shop by Health Categor
       <div className="max-w-wrap mx-auto px-4 md:px-8">
         
         {/* Section Heading */}
-        <div className="text-center max-w-xl mx-auto mb-10">
+        <Reveal className="text-center max-w-xl mx-auto mb-10">
           <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#0D3B23]">
             {title}
           </h2>
           <div className="w-12 h-1 bg-[#0A6C35] mx-auto rounded-full mt-3" />
-        </div>
+        </Reveal>
 
         {/* Carousel Container */}
-        <div className="relative group">
+        <Reveal delay={1} className="relative group" as="div">
           
           {/* Scroll Left Button */}
           <button
             onClick={() => scroll("left")}
-            className="absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-center transition-all"
+            className="absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 hover:scale-110 active:scale-90 flex items-center justify-center transition-all"
             aria-label="Scroll left"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -103,13 +104,13 @@ export default function Categories({ categories, title = "Shop by Health Categor
           {/* Scroll Right Button */}
           <button
             onClick={() => scroll("right")}
-            className="absolute -right-3 md:-right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center justify-center transition-all"
+            className="absolute -right-3 md:-right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 hover:scale-110 active:scale-90 flex items-center justify-center transition-all"
             aria-label="Scroll right"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
 
-        </div>
+        </Reveal>
 
       </div>
     </section>

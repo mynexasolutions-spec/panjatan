@@ -3,6 +3,7 @@
 import React from "react";
 import { Leaf, UserCheck, Shield, Truck } from "lucide-react";
 import type { HomepageSection } from "@/lib/cms";
+import Reveal from "./Reveal";
 
 export default function FeatureBar({ section }: { section?: HomepageSection }) {
   const fallbackFeatures = [
@@ -40,11 +41,12 @@ export default function FeatureBar({ section }: { section?: HomepageSection }) {
           {features.map((item, index) => {
             const Icon = icons[index % icons.length];
             return (
-              <div
+              <Reveal
                 key={index}
-                className="flex items-center gap-4 p-4 rounded-2xl bg-[#FBFDFB] border border-emerald-100/80 shadow-card hover:border-emerald-300 transition-all group"
+                delay={(index % 4) as 0 | 1 | 2 | 3}
+                className="flex items-center gap-4 p-4 rounded-2xl bg-[#FBFDFB] border border-emerald-100/80 shadow-card hover:border-emerald-300 hover:shadow-md hover:-translate-y-1 transition-all group"
               >
-                <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200/60 text-[#0A6C35] flex items-center justify-center shrink-0 group-hover:bg-[#0A6C35] group-hover:text-white transition-colors">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200/60 text-[#0A6C35] flex items-center justify-center shrink-0 group-hover:bg-[#0A6C35] group-hover:text-white group-hover:scale-110 transition-all">
                   <Icon className="w-6 h-6" />
                 </div>
                 <div>
@@ -55,7 +57,7 @@ export default function FeatureBar({ section }: { section?: HomepageSection }) {
                     {item.subtitle}
                   </p>
                 </div>
-              </div>
+              </Reveal>
             );
           })}
         </div>
