@@ -1,63 +1,63 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { Leaf, UserCheck, Shield, Truck } from "lucide-react";
 import type { HomepageSection } from "@/lib/cms";
-import Reveal from "./Reveal";
+
+type FeatureItem = {
+  title: string;
+  subtitle: string;
+  image_url?: string | null;
+};
 
 export default function FeatureBar({ section }: { section?: HomepageSection }) {
-  const fallbackFeatures = [
-    {
-      icon: Leaf,
-      title: "Organic Herbs",
-      subtitle: "Carefully Sourced",
-    },
-    {
-      icon: UserCheck,
-      title: "Expert Formulated",
-      subtitle: "Ayurvedic Experts",
-    },
-    {
-      icon: Shield,
-      title: "Safe & Natural",
-      subtitle: "No Side Effects*",
-    },
-    {
-      icon: Truck,
-      title: "Fast Delivery",
-      subtitle: "Pan India",
-    },
+  const fallbackFeatures: FeatureItem[] = [
+    { title: "Organic Herbs", subtitle: "Carefully Sourced", image_url: null },
+    { title: "Expert Formulated", subtitle: "Ayurvedic Experts", image_url: null },
+    { title: "Safe & Natural", subtitle: "No Side Effects*", image_url: null },
+    { title: "Fast Delivery", subtitle: "Pan India", image_url: null },
   ];
-  const features = section?.homepage_section_items?.map((item) => ({
-    title: item.title,
-    subtitle: item.subtitle,
-  })) || fallbackFeatures;
   const icons = [Leaf, UserCheck, Shield, Truck];
 
+  const features: FeatureItem[] =
+    section?.homepage_section_items && section.homepage_section_items.length > 0
+      ? section.homepage_section_items.map((item) => ({
+          title: item.title,
+          subtitle: item.subtitle,
+          image_url: item.image_url,
+        }))
+      : fallbackFeatures;
+
+  // Duplicate the row so the marquee track (translateX 0 -> -50%, see
+  // .marquee-track in globals.css) loops seamlessly with no visible seam.
+  const looped = [...features, ...features];
+
   return (
-    <section className="py-8 bg-white border-y border-emerald-100/60 shadow-sm relative z-20">
-      <div className="max-w-wrap mx-auto px-4 md:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-          {features.map((item, index) => {
+    <section className="relative py-6 md:py-7 bg-[#0D3B23] overflow-hidden">
+      {/* Edge fades so badges scroll in/out softly instead of clipping hard */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-10 md:w-24 z-10 bg-gradient-to-r from-[#0D3B23] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-10 md:w-24 z-10 bg-gradient-to-l from-[#0D3B23] to-transparent" />
+
+      <div className="marquee-row overflow-hidden">
+        <div className="marquee-track">
+          {looped.map((item, index) => {
             const Icon = icons[index % icons.length];
             return (
-              <Reveal
-                key={index}
-                delay={(index % 4) as 0 | 1 | 2 | 3}
-                className="flex items-center gap-4 p-4 rounded-2xl bg-[#FBFDFB] border border-emerald-100/80 shadow-card hover:border-emerald-300 hover:shadow-md hover:-translate-y-1 transition-all group"
-              >
-                <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200/60 text-[#0A6C35] flex items-center justify-center shrink-0 group-hover:bg-[#0A6C35] group-hover:text-white group-hover:scale-110 transition-all">
-                  <Icon className="w-6 h-6" />
+              <div key={index} className="flex items-center gap-3 md:gap-4 px-5 md:px-10 shrink-0">
+                <div className="relative w-11 h-11 md:w-12 md:h-12 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center shrink-0">
+                  {item.image_url ? (
+                    <Image src={item.image_url} alt={item.title} fill sizes="48px" className="object-cover" />
+                  ) : (
+                    <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                  )}
                 </div>
-                <div>
-                  <h4 className="font-extrabold text-[#0D3B23] text-sm md:text-base leading-snug">
-                    {item.title}
-                  </h4>
-                  <p className="text-xs text-gray-500 font-medium mt-0.5">
-                    {item.subtitle}
-                  </p>
+                <div className="whitespace-nowrap">
+                  <h4 className="font-extrabold text-white text-sm md:text-base leading-snug">{item.title}</h4>
+                  <p className="text-xs text-emerald-100/80 font-medium mt-0.5">{item.subtitle}</p>
                 </div>
-              </Reveal>
+                <span className="ml-2 md:ml-4 h-1.5 w-1.5 rounded-full bg-white/25 shrink-0" aria-hidden="true" />
+              </div>
             );
           })}
         </div>

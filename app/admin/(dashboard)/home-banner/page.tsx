@@ -11,16 +11,23 @@ export default async function AdminHomeBannerPage() {
     getHomeBannerImages(),
   ])
 
+  const desktopImages = images.filter((img) => (img.device_type || 'desktop') === 'desktop')
+  const mobileImages = images.filter((img) => img.device_type === 'mobile')
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-stone-900">Home Banner</h1>
+        <h1 className="text-2xl font-bold text-stone-900">Hero Banner</h1>
         <p className="text-sm text-stone-500 mt-1">
-          Manage the auto-swiping banner shown on the homepage, just above "Shop by Category".
+          This banner is now the homepage hero — it replaces the old text + image hero. Upload separate image sets for desktop/PC and mobile; each set auto-slides when it has more than one active image.
         </p>
       </div>
 
-      <HomeBannerManager initialEnabled={enabled} initialImages={images} />
+      <HomeBannerManager
+        initialEnabled={enabled}
+        initialDesktopImages={desktopImages}
+        initialMobileImages={mobileImages}
+      />
     </div>
   )
 }

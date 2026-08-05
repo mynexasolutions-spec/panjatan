@@ -136,6 +136,40 @@ export async function fetchHeroSlides(): Promise<DbHeroSlide[]> {
   return data ?? [];
 }
 
+export type DbHomeBannerImage = {
+  id: string;
+  image_url: string;
+  link_url: string | null;
+  device_type: "desktop" | "mobile";
+  is_active: boolean;
+  display_order: number;
+};
+
+// Homepage hero banner (full-width, admin-managed, auto-sliding). Replaces
+// the old two-column text+image hero — see components/HeroBanner.tsx.
+export async function fetchHomeBannerImages(): Promise<{ enabled: boolean; images: DbHomeBannerImage[] }> {
+  const supabase = getSupabase();
+  const [settingsResult, imagesResult] = await Promise.all([
+    supabase.from("settings").select("home_banner_enabled").eq("id", "global-settings-id").maybeSingle(),
+    supabase
+      .from("home_banner_images")
+      .select("*")
+      .eq("is_active", true)
+      .order("device_type", { ascending: true })
+      .order("display_order", { ascending: true }),
+  ]);
+
+  if (imagesResult.error) {
+    console.error("[fetchHomeBannerImages] Supabase error:", imagesResult.error.message);
+    return { enabled: false, images: [] };
+  }
+
+  return {
+    enabled: !!settingsResult.data?.home_banner_enabled,
+    images: imagesResult.data ?? [],
+  };
+}
+
 export async function fetchAllProducts(): Promise<DbProduct[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase

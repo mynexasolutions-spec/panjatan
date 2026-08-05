@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { Leaf } from "lucide-react";
 import type { HomepageSection, SiteSettings } from "@/lib/cms";
 import Reveal from "./Reveal";
@@ -54,11 +55,15 @@ export default function GoodnessOfNature({ section, settings }: { section: Homep
                   delay={(idx % 4) as 0 | 1 | 2 | 3}
                   className="flex flex-col items-center text-center shrink-0 group"
                 >
-                  {/* Round herb image representation */}
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-800/80 border-2 border-emerald-500/50 shadow-lg flex items-center justify-center mb-2 group-hover:scale-105 group-hover:border-emerald-300 transition-all">
-                    <div className="w-10 h-10 rounded-full bg-emerald-600/60 flex items-center justify-center">
-                      <Leaf className="w-5 h-5 text-emerald-200" />
-                    </div>
+                  {/* Herb image — real photo when uploaded, leaf icon fallback otherwise */}
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-800/80 border-2 border-emerald-500/50 shadow-lg overflow-hidden flex items-center justify-center mb-2 group-hover:scale-105 group-hover:border-emerald-300 transition-all">
+                    {item.image_url ? (
+                      <Image src={item.image_url} alt={item.title} fill sizes="80px" className="object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-emerald-600/60 flex items-center justify-center">
+                        <Leaf className="w-5 h-5 text-emerald-200" />
+                      </div>
+                    )}
                   </div>
                   
                   {/* Herb Name */}

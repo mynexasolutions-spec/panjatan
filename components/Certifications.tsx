@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useLayoutEffect, useRef } from "react";
+import Image from "next/image";
 import { ShieldCheck, Award, Flag, Leaf, CheckCircle2 } from "lucide-react";
 import type { HomepageSection } from "@/lib/cms";
 import Reveal from "./Reveal";
@@ -75,11 +76,15 @@ export default function Certifications({ section }: { section: HomepageSection }
                       className="cert-ring"
                     />
                   </svg>
-                  <div className="absolute inset-[7px] rounded-full bg-white shadow-md flex items-center justify-center p-2">
-                    <div className={`w-full h-full rounded-full border border-dashed ${color.inner} flex flex-col items-center justify-center p-1`}>
-                      <Icon className={`w-6 h-6 ${color.text} mb-1`} />
-                      <span className="px-1 text-[8px] font-black uppercase leading-tight text-gray-800">{item.title}</span>
-                    </div>
+                  <div className="absolute inset-[7px] rounded-full bg-white shadow-md overflow-hidden flex items-center justify-center p-2">
+                    {item.image_url ? (
+                      <Image src={item.image_url} alt={item.title} fill sizes="96px" className="object-cover" />
+                    ) : (
+                      <div className={`w-full h-full rounded-full border border-dashed ${color.inner} flex flex-col items-center justify-center p-1`}>
+                        <Icon className={`w-6 h-6 ${color.text} mb-1`} />
+                        <span className="px-1 text-[8px] font-black uppercase leading-tight text-gray-800">{item.title}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {item.subtitle && <span className="mt-2 text-xs font-semibold text-gray-600">{item.subtitle}</span>}

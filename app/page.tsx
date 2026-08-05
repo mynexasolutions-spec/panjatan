@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-import Hero from "@/components/Hero";
+import HeroBanner from "@/components/HeroBanner";
 import FeatureBar from "@/components/FeatureBar";
 import Story from "@/components/Story";
 import Categories from "@/components/Categories";
@@ -10,7 +10,7 @@ import Testimonials from "@/components/Testimonials";
 import Certifications from "@/components/Certifications";
 import Footer from "@/components/Footer";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
-import { fetchCategories, fetchFeaturedProducts, fetchHeroSlides, DbCategory, DbProduct } from "@/lib/queries";
+import { fetchCategories, fetchFeaturedProducts, fetchHomeBannerImages, DbCategory, DbProduct } from "@/lib/queries";
 import { getHomepageSections, getStorefrontShell } from "@/lib/cms";
 
 // Convert DB types to the shapes our components expect
@@ -50,24 +50,24 @@ function toComponentProduct(p: DbProduct) {
 
 export default async function Home() {
   // Fetch live from Supabase in parallel
-  const [dbCategories, dbProducts, homepageSections, shell, heroSlides] = await Promise.all([
+  const [dbCategories, dbProducts, homepageSections, shell, homeBanner] = await Promise.all([
     fetchCategories(),
     fetchFeaturedProducts(),
     getHomepageSections(),
     getStorefrontShell(),
-    fetchHeroSlides(),
+    fetchHomeBannerImages(),
   ]);
 
   const categories = dbCategories.map(toComponentCategory);
   const featuredProducts = dbProducts.map(toComponentProduct).filter((product) => !!product.variant_id);
-  const heroRightSlides = heroSlides.filter((slide) => slide.position === "right");
+  const heroBannerImages = homeBanner.enabled ? homeBanner.images : [];
   return (
     <main className="min-h-screen bg-[#F8F6F0] overflow-x-hidden text-gray-900">
       <Header />
       {homepageSections.map((section) => {
         switch (section.section_key) {
           case 'hero':
-            return <Hero key={section.id} section={section} heroSlides={heroRightSlides} />;
+            return <HeroBanner key={section.id} images={heroBannerImages} />;
           case 'feature-bar':
             return <FeatureBar key={section.id} section={section} />;
           case 'story':

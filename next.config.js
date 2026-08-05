@@ -6,13 +6,12 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [
+      // Wildcard so any https image URL pasted into admin/CMS text fields
+      // (Cloudinary, Unsplash, Google-hosted images, etc.) renders instead
+      // of throwing "hostname is not configured" at request time.
       {
         protocol: "https",
-        hostname: "images.unsplash.com",
-      },
-      {
-        protocol: "https",
-        hostname: "res.cloudinary.com",
+        hostname: "**",
       },
     ],
   },

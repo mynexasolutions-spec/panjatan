@@ -44,16 +44,25 @@ export async function getHomeBannerImages() {
   return data || []
 }
 
-export async function createHomeBannerImage(imageUrl: string, linkUrl: string) {
+const MAX_IMAGES_PER_DEVICE = 6
+
+export type HomeBannerDeviceType = 'desktop' | 'mobile'
+
+export async function createHomeBannerImage(
+  imageUrl: string,
+  linkUrl: string,
+  deviceType: HomeBannerDeviceType = 'desktop'
+) {
   const supabase = await requireAdminClient()
   if (!supabase) return { success: false, error: 'Unauthorized' }
 
   const { count } = await supabase
     .from('home_banner_images')
     .select('*', { count: 'exact', head: true })
+    .eq('device_type', deviceType)
 
-  if (count && count >= 8) {
-    return { success: false, error: 'Maximum 8 banner images allowed.' }
+  if (count && count >= MAX_IMAGES_PER_DEVICE) {
+    return { success: false, error: `Maximum ${MAX_IMAGES_PER_DEVICE} ${deviceType} banner images allowed.` }
   }
 
   const { error } = await supabase
@@ -64,6 +73,7 @@ export async function createHomeBannerImage(imageUrl: string, linkUrl: string) {
       link_url: linkUrl ? linkUrl.trim() : null,
       is_active: true,
       display_order: count || 0,
+      device_type: deviceType,
     }])
 
   if (error) return { success: false, error: error.message }

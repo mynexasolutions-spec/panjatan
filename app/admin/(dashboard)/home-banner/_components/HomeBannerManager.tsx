@@ -8,8 +8,9 @@ import {
   setHomeBannerEnabled,
   toggleHomeBannerImageStatus,
   updateHomeBannerImageLink,
+  type HomeBannerDeviceType,
 } from '@/actions/admin/homeBanner'
-import { Trash2, Plus, Image as ImageIcon, Loader2, Link as LinkIcon } from 'lucide-react'
+import { Trash2, Plus, Image as ImageIcon, Loader2, Link as LinkIcon, Monitor, Smartphone } from 'lucide-react'
 import { CldUploadWidget } from 'next-cloudinary'
 
 type BannerImage = {
@@ -17,23 +18,22 @@ type BannerImage = {
   image_url: string
   link_url: string | null
   is_active: boolean
+  device_type?: HomeBannerDeviceType
 }
+
+const MAX_IMAGES_PER_DEVICE = 6
 
 export function HomeBannerManager({
   initialEnabled,
-  initialImages,
+  initialDesktopImages,
+  initialMobileImages,
 }: {
   initialEnabled: boolean
-  initialImages: BannerImage[]
+  initialDesktopImages: BannerImage[]
+  initialMobileImages: BannerImage[]
 }) {
   const [enabled, setEnabled] = useState(initialEnabled)
-  const [images, setImages] = useState<BannerImage[]>(initialImages)
-  const [linkDrafts, setLinkDrafts] = useState<Record<string, string>>(
-    Object.fromEntries(initialImages.map((img) => [img.id, img.link_url || '']))
-  )
   const [isPending, startTransition] = useTransition()
-
-  const activeCount = images.filter((i) => i.is_active).length
 
   const handleToggleEnabled = () => {
     const next = !enabled
@@ -47,11 +47,74 @@ export function HomeBannerManager({
     })
   }
 
+  return (
+    <div className="space-y-6">
+      {/* Enable / Disable */}
+      <div className="bg-white rounded-2xl shadow-sm border border-stone-200/60 p-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-stone-900">Show Banner on Homepage</h2>
+          <p className="text-sm text-stone-500 mt-1">
+            Turn this on once you've added at least one active image below. When off, the homepage falls back to the default banner image.
+          </p>
+        </div>
+        <label className="relative inline-flex items-center cursor-pointer shrink-0">
+          <input
+            type="checkbox"
+            className="sr-only peer"
+            checked={enabled}
+            onChange={handleToggleEnabled}
+            disabled={isPending}
+          />
+          <div className="w-12 h-7 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <BannerDevicePanel
+          deviceType="desktop"
+          title="Desktop / PC Images"
+          icon={Monitor}
+          aspectHint="Wide landscape, e.g. 1920×800px (~2.4:1)"
+          initialImages={initialDesktopImages}
+        />
+        <BannerDevicePanel
+          deviceType="mobile"
+          title="Mobile Images"
+          icon={Smartphone}
+          aspectHint="Taller crop, e.g. 900×1100px (~4:5)"
+          initialImages={initialMobileImages}
+        />
+      </div>
+    </div>
+  )
+}
+
+function BannerDevicePanel({
+  deviceType,
+  title,
+  icon: Icon,
+  aspectHint,
+  initialImages,
+}: {
+  deviceType: HomeBannerDeviceType
+  title: string
+  icon: typeof Monitor
+  aspectHint: string
+  initialImages: BannerImage[]
+}) {
+  const [images, setImages] = useState<BannerImage[]>(initialImages)
+  const [linkDrafts, setLinkDrafts] = useState<Record<string, string>>(
+    Object.fromEntries(initialImages.map((img) => [img.id, img.link_url || '']))
+  )
+  const [isPending, startTransition] = useTransition()
+
+  const activeCount = images.filter((i) => i.is_active).length
+
   const handleUploadSuccess = (result: any) => {
     const imageUrl = result.info.secure_url
 
     startTransition(async () => {
-      const res = await createHomeBannerImage(imageUrl, '')
+      const res = await createHomeBannerImage(imageUrl, '', deviceType)
       if (res.success) {
         window.location.reload()
       } else {
@@ -89,136 +152,113 @@ export function HomeBannerManager({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Enable / Disable */}
-      <div className="bg-white rounded-2xl shadow-sm border border-stone-200/60 p-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-stone-900">Show Banner on Homepage</h2>
-          <p className="text-sm text-stone-500 mt-1">
-            Turn this on once you've added at least one active image below.
-          </p>
-        </div>
-        <label className="relative inline-flex items-center cursor-pointer shrink-0">
-          <input
-            type="checkbox"
-            className="sr-only peer"
-            checked={enabled}
-            onChange={handleToggleEnabled}
-            disabled={isPending}
-          />
-          <div className="w-12 h-7 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
-        </label>
-      </div>
-
-      {/* Images */}
-      <div className="bg-white rounded-2xl shadow-sm border border-stone-200/60 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <ImageIcon className="w-5 h-5 text-stone-400" />
-            <h2 className="text-lg font-bold text-stone-900">Banner Images</h2>
-          </div>
-
-          {images.length < 8 ? (
-            <CldUploadWidget
-              signatureEndpoint="/api/cloudinary/sign"
-              options={{
-                maxFiles: 1,
-                resourceType: 'image',
-                clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
-              }}
-              onSuccess={handleUploadSuccess}
-            >
-              {({ open }) => (
-                <button
-                  onClick={() => open()}
-                  disabled={isPending}
-                  className="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white text-sm font-semibold rounded-xl hover:bg-stone-800 transition-colors disabled:opacity-50"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Image
-                </button>
-              )}
-            </CldUploadWidget>
-          ) : (
-            <span className="text-sm font-medium text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
-              Maximum 8 images reached
-            </span>
-          )}
+    <div className="bg-white rounded-2xl shadow-sm border border-stone-200/60 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Icon className="w-5 h-5 text-stone-400" />
+          <h2 className="text-lg font-bold text-stone-900">{title}</h2>
         </div>
 
-        <p className="text-sm text-stone-500 mb-6 leading-relaxed">
-          Upload images in a 3:1 landscape ratio (e.g. 1800×600px) for the best fit — a wide, short strip rather than a tall banner. They auto-swipe on the homepage. You have {activeCount} active image{activeCount === 1 ? '' : 's'}.
-        </p>
-
-        <div className="space-y-4">
-          {images.length === 0 ? (
-            <div className="text-center py-12 border-2 border-dashed border-stone-200 rounded-xl bg-stone-50">
-              <ImageIcon className="w-8 h-8 text-stone-400 mx-auto mb-3" />
-              <p className="text-sm font-medium text-stone-900">No banner images yet</p>
-              <p className="text-sm text-stone-500 mt-1">Upload a 3:1 image (e.g. 1800×600px) to start building the banner.</p>
-            </div>
-          ) : (
-            images.map((img, index) => (
-              <div
-                key={img.id}
-                className={`rounded-xl border transition-all overflow-hidden ${
-                  img.is_active ? 'border-stone-200 bg-white' : 'border-stone-100 bg-stone-50 opacity-60'
-                }`}
+        {images.length < MAX_IMAGES_PER_DEVICE ? (
+          <CldUploadWidget
+            signatureEndpoint="/api/cloudinary/sign"
+            options={{
+              maxFiles: 1,
+              resourceType: 'image',
+              clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+            }}
+            onSuccess={handleUploadSuccess}
+          >
+            {({ open }) => (
+              <button
+                onClick={() => open()}
+                disabled={isPending}
+                className="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white text-sm font-semibold rounded-xl hover:bg-stone-800 transition-colors disabled:opacity-50"
               >
-                <div className="flex items-center gap-4 p-4">
-                  <div className="w-32 aspect-[3/1] shrink-0 rounded-lg overflow-hidden relative bg-stone-200 border border-stone-200">
-                    <Image src={img.image_url} alt={`Banner ${index + 1}`} fill className="object-cover" />
-                  </div>
-
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <p className="text-sm font-semibold text-stone-900">Banner {index + 1}</p>
-                    <div className="relative">
-                      <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-                      <input
-                        type="text"
-                        value={linkDrafts[img.id] ?? ''}
-                        onChange={(e) => setLinkDrafts({ ...linkDrafts, [img.id]: e.target.value })}
-                        onBlur={() => handleLinkBlur(img.id)}
-                        placeholder="/shop or https://... (optional link when clicked)"
-                        className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-stone-200 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <label className="relative inline-flex items-center cursor-pointer ml-2">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={img.is_active}
-                        onChange={() => handleToggleImage(img.id, img.is_active)}
-                        disabled={isPending}
-                      />
-                      <div className="w-9 h-5 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
-                    </label>
-
-                    <button
-                      onClick={() => handleDelete(img.id)}
-                      disabled={isPending}
-                      className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 ml-1"
-                      title="Delete Image"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {isPending && (
-          <div className="mt-4 flex items-center justify-center text-sm text-stone-500 gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Processing...
-          </div>
+                <Plus className="w-4 h-4" />
+                Add Image
+              </button>
+            )}
+          </CldUploadWidget>
+        ) : (
+          <span className="text-sm font-medium text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
+            Maximum {MAX_IMAGES_PER_DEVICE} reached
+          </span>
         )}
       </div>
+
+      <p className="text-sm text-stone-500 mb-6 leading-relaxed">
+        {aspectHint}. Add 2+ active images to enable the smooth sliding animation. You have {activeCount} active image{activeCount === 1 ? '' : 's'}.
+      </p>
+
+      <div className="space-y-4">
+        {images.length === 0 ? (
+          <div className="text-center py-12 border-2 border-dashed border-stone-200 rounded-xl bg-stone-50">
+            <ImageIcon className="w-8 h-8 text-stone-400 mx-auto mb-3" />
+            <p className="text-sm font-medium text-stone-900">No {deviceType} images yet</p>
+            <p className="text-sm text-stone-500 mt-1">Upload an image to start building this banner.</p>
+          </div>
+        ) : (
+          images.map((img, index) => (
+            <div
+              key={img.id}
+              className={`rounded-xl border transition-all overflow-hidden ${
+                img.is_active ? 'border-stone-200 bg-white' : 'border-stone-100 bg-stone-50 opacity-60'
+              }`}
+            >
+              <div className="flex items-center gap-4 p-4">
+                <div className={`w-24 shrink-0 rounded-lg overflow-hidden relative bg-stone-200 border border-stone-200 ${deviceType === 'mobile' ? 'aspect-[4/5]' : 'aspect-[12/5]'}`}>
+                  <Image src={img.image_url} alt={`Banner ${index + 1}`} fill className="object-cover" />
+                </div>
+
+                <div className="flex-1 min-w-0 space-y-2">
+                  <p className="text-sm font-semibold text-stone-900">Slide {index + 1}</p>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                    <input
+                      type="text"
+                      value={linkDrafts[img.id] ?? ''}
+                      onChange={(e) => setLinkDrafts({ ...linkDrafts, [img.id]: e.target.value })}
+                      onBlur={() => handleLinkBlur(img.id)}
+                      placeholder="/shop or https://... (optional link when clicked)"
+                      className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-stone-200 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <label className="relative inline-flex items-center cursor-pointer ml-2">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={img.is_active}
+                      onChange={() => handleToggleImage(img.id, img.is_active)}
+                      disabled={isPending}
+                    />
+                    <div className="w-9 h-5 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+
+                  <button
+                    onClick={() => handleDelete(img.id)}
+                    disabled={isPending}
+                    className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 ml-1"
+                    title="Delete Image"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {isPending && (
+        <div className="mt-4 flex items-center justify-center text-sm text-stone-500 gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Processing...
+        </div>
+      )}
     </div>
   )
 }
