@@ -19,16 +19,14 @@ export default async function AdminOrderDetailsPage({
   const supabase = await requireAdminClient()
   if (!supabase) redirect('/admin/login')
 
-  // Fetch Order Details
+  // Fetch Order Details.
+  // Note: orders.user_id references auth.users, not public.profiles directly,
+  // so there is no FK PostgREST can use to embed profiles here — it has to be
+  // fetched separately (see below), otherwise the whole query 404s.
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .select(`
       *,
-      profiles:user_id (
-        full_name,
-        email,
-        phone
-      ),
       addresses:address_id (
         full_name,
         phone,
@@ -49,6 +47,16 @@ export default async function AdminOrderDetailsPage({
 
   if (!order) {
     notFound()
+  }
+
+  let profile: { full_name: string | null; email: string | null } | null = null
+  if (order.user_id) {
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('full_name, email')
+      .eq('id', order.user_id)
+      .maybeSingle()
+    profile = profileData
   }
 
   const shippingAddress = order.shipping_address || order.addresses
@@ -106,10 +114,10 @@ export default async function AdminOrderDetailsPage({
                 Customer
               </h3>
               <div className="space-y-2 text-sm">
-                <p className="font-medium text-stone-900">{order.profiles?.full_name || order.customer_name || 'Guest'}</p>
-                {order.profiles?.email && <p className="text-stone-600">{order.profiles.email}</p>}
-                {(order.profiles?.phone || order.customer_phone) && (
-                  <p className="text-stone-600">+91 {order.profiles?.phone || order.customer_phone}</p>
+                <p className="font-medium text-stone-900">{profile?.full_name || order.customer_name || 'Guest'}</p>
+                {profile?.email && <p className="text-stone-600">{profile.email}</p>}
+                {order.customer_phone && (
+                  <p className="text-stone-600">+91 {order.customer_phone}</p>
                 )}
               </div>
             </div>

@@ -13,10 +13,14 @@ export default async function ProductsPage() {
   const supabase = await requireAdminClient()
   if (!supabase) redirect('/admin/login')
 
-  const { data: products } = await supabase
+  const { data: products, error } = await supabase
     .from('products')
-    .select('*, categories(name)')
+    .select('*, categories!products_category_id_fkey(name)')
     .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Failed to load products:', error)
+  }
 
   return (
     <div className="space-y-6">

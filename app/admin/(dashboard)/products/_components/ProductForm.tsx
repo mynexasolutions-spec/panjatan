@@ -97,7 +97,7 @@ export default function ProductForm({ product, categories, otherProducts = [] }:
                   required
                   maxLength={255}
                   defaultValue={product?.name || ''}
-                  placeholder="e.g. Premium Front Open Abaya"
+                  placeholder="e.g. Organic Turmeric Powder"
                   className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
                 />
                 <p className="text-xs text-stone-400 mt-1.5">
@@ -150,38 +150,38 @@ export default function ProductForm({ product, categories, otherProducts = [] }:
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Fabric Details */}
+              {/* Ingredients */}
               <div>
                 <label
                   htmlFor="product-fabric"
                   className="block text-sm font-medium text-stone-700 mb-1.5"
                 >
-                  Fabric Details
+                  Ingredients / Composition
                 </label>
                 <input
                   id="product-fabric"
                   name="fabric"
                   type="text"
                   defaultValue={(product as any)?.fabric || ''}
-                  placeholder="e.g. Premium quality nida/crepe"
+                  placeholder="e.g. 100% organic turmeric, no additives"
                   className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
                 />
               </div>
 
-              {/* Stitching Details */}
+              {/* Preparation Details */}
               <div>
                 <label
                   htmlFor="product-stitching"
                   className="block text-sm font-medium text-stone-700 mb-1.5"
                 >
-                  Stitching Details
+                  Preparation / Processing
                 </label>
                 <input
                   id="product-stitching"
                   name="stitching"
                   type="text"
                   defaultValue={(product as any)?.stitching || ''}
-                  placeholder="e.g. Dual-reinforced seams"
+                  placeholder="e.g. Sun-dried, stone-ground, small-batch"
                   className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
                 />
               </div>

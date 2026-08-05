@@ -23,10 +23,15 @@ export async function getCustomers() {
   const supabase = await requireAdminClient()
   if (!supabase) return []
 
+  // Select '*' rather than naming columns explicitly: the `phone` and
+  // `is_active` columns are only present on profiles after the migration in
+  // supabase/migrations/add_profile_phone_is_active.sql has been run. Naming
+  // them directly makes PostgREST error out and silently drops every account
+  // customer from this list on databases where that migration hasn't run yet.
   const [profilesResult, guestsResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, full_name, email, phone, created_at, is_active')
+      .select('*')
       .eq('role', 'customer'),
     supabase
       .from('guest_customers')
@@ -36,11 +41,11 @@ export async function getCustomers() {
   if (profilesResult.error) console.error('Unable to load account customers:', profilesResult.error.message)
   if (guestsResult.error) console.error('Unable to load device customers:', guestsResult.error.message)
 
-  const accounts: AdminCustomer[] = (profilesResult.data || []).map((customer) => ({
+  const accounts: AdminCustomer[] = (profilesResult.data || []).map((customer: any) => ({
     id: customer.id,
     full_name: customer.full_name || 'Customer',
     email: customer.email || '',
-    phone: customer.phone,
+    phone: customer.phone ?? null,
     created_at: customer.created_at,
     is_active: customer.is_active !== false,
     customer_type: 'account',

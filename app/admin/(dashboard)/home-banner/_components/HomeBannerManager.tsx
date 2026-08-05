@@ -74,14 +74,14 @@ export function HomeBannerManager({
           deviceType="desktop"
           title="Desktop / PC Images"
           icon={Monitor}
-          aspectHint="Wide landscape, e.g. 1920×800px (~2.4:1)"
+          aspectHint="Wide landscape, e.g. aspect ratio 16:9 "
           initialImages={initialDesktopImages}
         />
         <BannerDevicePanel
           deviceType="mobile"
           title="Mobile Images"
           icon={Smartphone}
-          aspectHint="Taller crop, e.g. 900×1100px (~4:5)"
+          aspectHint="Taller crop, e.g. aspect ration 3:4 "
           initialImages={initialMobileImages}
         />
       </div>

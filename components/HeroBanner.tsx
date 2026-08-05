@@ -108,7 +108,7 @@ export default function HeroBanner({ images }: { images: DbHomeBannerImage[] }) 
 
   if (effectiveDesktop.length === 0 && effectiveMobile.length === 0) {
     return (
-      <section className="relative pt-[140px] md:pt-[150px] px-3 sm:px-4 md:px-6 lg:px-8">
+      <section className="relative pt-[125px] md:pt-[135px] px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="relative w-full max-w-wrap mx-auto aspect-[4/5] sm:aspect-[16/9] md:aspect-[12/5] rounded-[22px] sm:rounded-[28px] md:rounded-[32px] overflow-hidden shadow-lg">
           <Image src="/banner.webp" alt="Panjatan Ayurveda" fill sizes="100vw" className="object-cover" priority />
         </div>
@@ -117,7 +117,7 @@ export default function HeroBanner({ images }: { images: DbHomeBannerImage[] }) 
   }
 
   return (
-    <section className="relative pt-[140px] md:pt-[150px] px-3 sm:px-4 md:px-6 lg:px-8 pb-3 md:pb-4">
+    <section className="relative pt-[125px] md:pt-[135px] px-3 sm:px-4 md:px-6 lg:px-8 pb-3 md:pb-4">
       <div className="max-w-wrap mx-auto">
         {/* Mobile banner — taller crop so nothing important is cut off on small screens */}
         <div className="md:hidden">

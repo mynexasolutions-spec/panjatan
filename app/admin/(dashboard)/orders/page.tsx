@@ -11,17 +11,33 @@ export default async function AdminOrdersPage() {
   const supabase = await requireAdminClient()
   if (!supabase) redirect('/admin/login')
 
-  // Fetch all orders with user profile info
-  const { data: orders } = await supabase
+  // Fetch all orders. Note: orders.user_id references auth.users, not
+  // public.profiles, so there's no FK for PostgREST to embed profiles with —
+  // fetch them separately and merge in JS instead.
+  const { data: orders, error: ordersError } = await supabase
     .from('orders')
-    .select(`
-      *,
-      profiles:user_id (
-        full_name,
-        email
-      )
-    `)
+    .select('*')
     .order('created_at', { ascending: false })
+
+  if (ordersError) {
+    console.error('Failed to load orders:', ordersError)
+  }
+
+  const userIds = Array.from(
+    new Set((orders || []).map((o) => o.user_id).filter(Boolean))
+  ) as string[]
+
+  let profilesById: Record<string, { full_name: string | null; email: string | null }> = {}
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', userIds)
+    profilesById = (profiles || []).reduce((acc, p) => {
+      acc[p.id] = { full_name: p.full_name, email: p.email }
+      return acc
+    }, {} as Record<string, { full_name: string | null; email: string | null }>)
+  }
 
   return (
     <div className="space-y-6">
@@ -71,7 +87,9 @@ export default async function AdminOrdersPage() {
                   </td>
                 </tr>
               ) : (
-                orders.map((order: any) => (
+                orders.map((order: any) => {
+                  const profile = order.user_id ? profilesById[order.user_id] : null
+                  return (
                   <tr key={order.id} className="hover:bg-stone-50/50 transition-colors group">
                     <td className="px-6 py-4">
                       <span className="font-semibold text-stone-900">{order.order_number}</span>
@@ -83,8 +101,8 @@ export default async function AdminOrdersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="font-medium text-stone-900">{order.profiles?.full_name || order.customer_name || 'Guest'}</span>
-                        <span className="text-xs text-stone-500">{order.profiles?.email || (order.customer_phone ? `+91 ${order.customer_phone}` : '')}</span>
+                        <span className="font-medium text-stone-900">{profile?.full_name || order.customer_name || 'Guest'}</span>
+                        <span className="text-xs text-stone-500">{profile?.email || (order.customer_phone ? `+91 ${order.customer_phone}` : '')}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -122,7 +140,8 @@ export default async function AdminOrdersPage() {
                       </Link>
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>
