@@ -83,6 +83,12 @@ export type StorefrontShell = {
   legalLinks: NavigationLink[]
 }
 
+export type Announcement = {
+  id: string
+  message: string
+  is_active: boolean
+}
+
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   id: 'global',
   site_name: 'Panjatan Ayurveda',
@@ -263,6 +269,36 @@ export async function getStorefrontShell(): Promise<StorefrontShell> {
     footerLinks: links.filter((link) => link.location === 'footer'),
     legalLinks: links.filter((link) => link.location === 'legal'),
   }
+}
+
+export async function getActiveAnnouncement(): Promise<Announcement | null> {
+  await connection()
+  const client = publicCmsClient()
+  if (!client) {
+    if (allowDevelopmentMocks()) return null
+    throw configurationError()
+  }
+  let data
+  let error
+  try {
+    const result = await client
+      .from('announcements')
+      .select('id, message, is_active')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    data = result.data
+    error = result.error
+  } catch (queryError) {
+    if (allowDevelopmentMocks()) return null
+    throw queryError
+  }
+  if (error) {
+    if (allowDevelopmentMocks()) return null
+    throw new Error(`Unable to load announcement: ${error.message}`)
+  }
+  return (data as Announcement | null) || null
 }
 
 export async function getHomepageSectionByKey(sectionKey: string): Promise<HomepageSection | null> {

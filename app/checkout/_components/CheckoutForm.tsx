@@ -6,12 +6,19 @@ import { useCustomer } from '@/context/CustomerContext'
 import { useToast } from '@/context/ToastContext'
 import { validateCoupon } from '@/actions/admin/coupons'
 import { processCheckout } from '@/actions/checkout'
+import { sendEmailOtp, verifyEmailOtp } from '@/actions/auth'
 import { SITE } from '@/lib/data'
-import { Truck, Tag, CreditCard, ShoppingBag, ShieldCheck, CheckCircle2, Plus, Minus, X, Loader2 } from 'lucide-react'
+import { Truck, Tag, CreditCard, ShoppingBag, CheckCircle2, Lock, Plus, Minus, X, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { isValidIndianPhone, LocalAddress, LocalOrder } from '@/lib/local-customer'
+import {
+  isValidEmail,
+  isValidIndianPhone,
+  LocalAddress,
+  LocalCustomer,
+  LocalOrder,
+  normalizeIndianPhone,
+} from '@/lib/local-customer'
 
 type ShippingSettings = {
   flat_rate: number
@@ -22,14 +29,14 @@ type ShippingSettings = {
 
 export default function CheckoutForm({ shipping, hasCoupons = false }: { shipping: ShippingSettings, hasCoupons?: boolean }) {
   const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } = useCart()
-  const { customer, address, isHydrated, saveAddress, addOrder } = useCustomer()
+  const { customer, address, isHydrated, saveAddress, addOrder, refreshCustomer } = useCustomer()
   const { showToast } = useToast()
-  const router = useRouter()
   const [pending, startTransition] = useTransition()
 
   // Shipping Address Form State
   const [profile, setProfile] = useState({
     fullName: '',
+    email: '',
     phone: '',
     alternatePhone: '',
     street: '',
@@ -37,6 +44,15 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
     state: '',
     zipCode: '',
   })
+
+  // Guest email verification — triggered directly from the "Place Order"
+  // button (no separate inline verify step), skipped entirely once
+  // `customer` (a real, logged-in session) exists.
+  const [otpSent, setOtpSent] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [otpPending, setOtpPending] = useState(false)
+  const [otpError, setOtpError] = useState('')
+  const [resendTimer, setResendTimer] = useState(60)
 
   // Coupon State
   const [couponCode, setCouponCode] = useState('')
@@ -51,25 +67,53 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
   // Success Modal State
   const [placedOrder, setPlacedOrder] = useState<any>(null)
 
-  // Prefill from the device-local customer and address.
+  // Prefill from the logged-in account and any saved address.
   useEffect(() => {
     if (!customer) return
-    setProfile({
+    setProfile((prev) => ({
       fullName: address?.fullName || customer.fullName,
-      phone: customer.phone,
-      alternatePhone: address?.alternatePhone || '',
-      street: address?.street || '',
-      city: address?.city || '',
-      state: address?.state || '',
-      zipCode: address?.zipCode || '',
-    })
+      email: customer.email,
+      phone: address?.phone || customer.phone,
+      alternatePhone: address?.alternatePhone || prev.alternatePhone,
+      street: address?.street || prev.street,
+      city: address?.city || prev.city,
+      state: address?.state || prev.state,
+      zipCode: address?.zipCode || prev.zipCode,
+    }))
   }, [address, customer])
+
+  // Resend-code countdown while the OTP modal is open
+  useEffect(() => {
+    if (!otpSent || resendTimer <= 0) return
+    const interval = setInterval(() => setResendTimer((prev) => prev - 1), 1000)
+    return () => clearInterval(interval)
+  }, [otpSent, resendTimer])
+
+  useEffect(() => {
+    if (otpSent) setResendTimer(60)
+  }, [otpSent])
+
+  // Freeze scrolling and drop the header behind the OTP modal while it's open
+  useEffect(() => {
+    const header = document.querySelector('header')
+    if (otpSent && !customer) {
+      if (header) header.style.zIndex = '0'
+      document.body.style.overflow = 'hidden'
+    } else {
+      if (header) header.style.zIndex = ''
+      document.body.style.overflow = ''
+    }
+    return () => {
+      if (header) header.style.zIndex = ''
+      document.body.style.overflow = ''
+    }
+  }, [otpSent, customer])
 
   // Calculate checkout details
   const subtotal = cartTotal
   const shippingFee = subtotal >= (shipping.free_threshold ?? 1999) ? 0 : (shipping.flat_rate ?? 99)
   const codFee = paymentMethod === 'Cash on Delivery' ? (shipping.cod_charge ?? 50) : 0
-  
+
   let discount = 0
   if (activeCoupon) {
     if (activeCoupon.type === 'percentage') {
@@ -106,19 +150,19 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
     }
   }
 
-  // Execute checkout and place order
-  const executeOrderPlacement = async () => {
-    if (!customer) {
-      router.push('/login?returnTo=%2Fcheckout')
-      return
-    }
+  // Execute checkout and place order. Takes the customer explicitly rather
+  // than reading it from context, because right after a fresh OTP
+  // verification the context hasn't necessarily re-rendered with the new
+  // session yet.
+  const executeOrderPlacement = async (customerForOrder: LocalCustomer) => {
     const method = paymentMethod === 'Online Payment (Demo)' ? 'ONLINE' : 'COD'
     checkoutIdempotencyKey.current ||= crypto.randomUUID()
 
     const savedAddress: LocalAddress = {
       fullName: profile.fullName,
-      phone: customer.phone,
+      phone: normalizeIndianPhone(profile.phone),
       alternatePhone: profile.alternatePhone,
+      email: customerForOrder.email,
       street: profile.street,
       city: profile.city,
       state: profile.state,
@@ -127,7 +171,7 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
     saveAddress(savedAddress)
 
     const res = await processCheckout(
-      { ...profile, phone: customer.phone },
+      { ...profile, phone: savedAddress.phone, email: customerForOrder.email },
       cart,
       method,
       activeCoupon?.code || '',
@@ -140,7 +184,7 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
       const localOrder: LocalOrder = {
         id: res.orderId,
         orderNumber: res.order_number,
-        customerPhone: customer.phone,
+        customerPhone: savedAddress.phone,
         createdAt: new Date().toISOString(),
         currencyCode: res.currencyCode,
         subtotal: res.subtotal,
@@ -177,31 +221,104 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
     }
   }
 
-  // Handle Checkout Submit
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const validateShippingFields = () => {
     if (cart.length === 0) {
       showToast('Your cart is empty', 'error')
-      return
+      return false
     }
-
-    if (!isHydrated) return
-    if (!customer) {
-      router.push('/login?returnTo=%2Fcheckout')
-      return
-    }
-
-    if (!profile.fullName || !profile.phone || !profile.street || !profile.city || !profile.state || !profile.zipCode) {
+    if (!profile.fullName || !profile.email || !profile.phone || !profile.street || !profile.city || !profile.state || !profile.zipCode) {
       showToast('Please fill out all shipping details.', 'error')
-      return
+      return false
     }
     if (!isValidIndianPhone(profile.phone)) {
       showToast('Please enter a valid 10-digit Indian mobile number.', 'error')
+      return false
+    }
+    if (!isValidEmail(profile.email)) {
+      showToast('Please enter a valid email address.', 'error')
+      return false
+    }
+    return true
+  }
+
+  // Handle Checkout Submit — mirrors the reference flow: logged-in
+  // customers place the order directly; guests get an OTP sent and a
+  // verification modal opens, all without leaving this page.
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!isHydrated) return
+    if (!validateShippingFields()) return
+
+    if (!customer) {
+      if (!otpSent) {
+        setOtpPending(true)
+        startTransition(async () => {
+          const res = await sendEmailOtp(profile.email.trim().toLowerCase(), 'REGISTER', profile.fullName.trim())
+          setOtpPending(false)
+          if (res?.error) {
+            showToast(res.error, 'error')
+          } else {
+            setOtpSent(true)
+            setOtpError('')
+            showToast('Verification code sent to ' + profile.email, 'success')
+          }
+        })
+        return
+      }
+      handleVerifyAndPlaceOrder()
       return
     }
 
     startTransition(async () => {
-      await executeOrderPlacement()
+      await executeOrderPlacement(customer)
+    })
+  }
+
+  const handleResendOtp = async () => {
+    setOtpPending(true)
+    const res = await sendEmailOtp(profile.email.trim().toLowerCase(), 'REGISTER', profile.fullName.trim())
+    setOtpPending(false)
+    if (res?.error) {
+      showToast(res.error, 'error')
+    } else {
+      setResendTimer(60)
+      showToast('Verification code resent successfully.', 'success')
+    }
+  }
+
+  const handleVerifyAndPlaceOrder = () => {
+    if (!otpCode || otpCode.length !== 6) {
+      setOtpError('Please enter a valid 6-digit verification code.')
+      return
+    }
+    setOtpPending(true)
+    startTransition(async () => {
+      const res = await verifyEmailOtp(
+        profile.email.trim().toLowerCase(),
+        otpCode,
+        'NO_REDIRECT',
+        profile.fullName.trim(),
+        normalizeIndianPhone(profile.phone)
+      )
+      if (res?.error) {
+        setOtpPending(false)
+        setOtpError(res.error)
+        showToast(res.error, 'error')
+        return
+      }
+      try {
+        const freshCustomer = await refreshCustomer()
+        if (!freshCustomer) {
+          throw new Error('Could not confirm your login. Please try again.')
+        }
+        await executeOrderPlacement(freshCustomer)
+        setOtpSent(false)
+        setOtpCode('')
+      } catch (err: any) {
+        showToast(err.message || 'Error processing checkout', 'error')
+      } finally {
+        setOtpPending(false)
+      }
     })
   }
 
@@ -295,6 +412,25 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
             </div>
             <div>
               <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                maxLength={120}
+                disabled={!!customer}
+                value={profile.email}
+                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                placeholder="e.g. sumaiya@example.com"
+                className={`w-full px-4 py-2.5 rounded-xl border text-sm transition-all focus:outline-none ${
+                  customer
+                    ? 'border-cream-line bg-cream/10 text-ink/50 cursor-not-allowed'
+                    : 'border-cream-line bg-cream/20 text-ink focus:ring-2 focus:ring-emerald/20 focus:border-emerald'
+                }`}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-ink/60 uppercase tracking-wider mb-1.5">
                 Phone Number
               </label>
               <input
@@ -304,9 +440,9 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
                 pattern="\d{10}"
                 title="Please enter exactly 10 digits"
                 value={profile.phone}
-                disabled
+                onChange={(e) => setProfile({ ...profile, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                 placeholder="e.g. 9876543210"
-                className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/10 text-ink/60 cursor-not-allowed text-sm"
+                className="w-full px-4 py-2.5 rounded-xl border border-cream-line bg-cream/20 text-ink focus:outline-none focus:ring-2 focus:ring-emerald/20 focus:border-emerald transition-all text-sm"
               />
             </div>
             <div>
@@ -391,8 +527,6 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
             </div>
           </div>
         </div>
-
-
 
         <div className="bg-white rounded-3xl p-6 md:p-8 border border-cream-line shadow-card space-y-6">
           <h2 className="text-lg font-bold text-ink uppercase tracking-wider flex items-center gap-2">
@@ -549,10 +683,10 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
 
           <button
             type="submit"
-            disabled={pending || !isHydrated}
+            disabled={pending || !isHydrated || otpPending}
             className="w-full py-4 px-6 bg-ink text-cream font-body font-bold rounded-full shadow-card hover:bg-gold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {pending ? (
+            {pending || otpPending ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <>
@@ -561,7 +695,7 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
                   ? paymentMethod === 'Online Payment (Demo)'
                     ? `Simulate Payment & Place Order • ₹${grandTotal.toLocaleString('en-IN')}`
                     : `Place COD Order • ₹${grandTotal.toLocaleString('en-IN')}`
-                  : 'Log in to continue'}
+                  : (otpSent ? 'Confirm OTP & Place Order' : 'Verify Email & Place Order')}
               </>
             )}
           </button>
@@ -605,6 +739,90 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
 
     </form>
 
+      {/* Email Verification Modal — only for guests placing their first order */}
+      {!customer && otpSent && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-2xl animate-fade-in">
+          <div className="bg-cream-deep max-w-md w-full rounded-3xl p-6 sm:p-8 border border-gold/30 shadow-soft text-center space-y-6 relative overflow-y-auto max-h-[90vh] sm:max-h-none">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setOtpSent(false)}
+              className="absolute right-4 top-4 p-2 rounded-full bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 border border-red-100/50 transition-all duration-300 shadow-sm"
+              aria-label="Close modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-14 h-14 bg-gold/10 text-gold rounded-full flex items-center justify-center mx-auto border border-gold/20 shadow-inner">
+              <Lock className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-heading text-2xl font-bold text-ink">Confirm Verification Code</h3>
+              <p className="text-sm text-ink/75 mt-2 font-body px-1">
+                We sent a 6-digit OTP code to <strong className="text-ink font-semibold">{profile.email}</strong>. Please enter it below to verify your account and complete your order.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => {
+                    setOtpCode(e.target.value.replace(/\D/g, ''))
+                    setOtpError('')
+                  }}
+                  placeholder="123456"
+                  className="w-full px-4 py-3.5 rounded-xl border border-gold/30 bg-cream text-center tracking-[0.5em] font-heading font-bold text-2xl text-ink focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/10 transition-all shadow-inner"
+                />
+              </div>
+
+              {otpError && (
+                <div className="p-2.5 bg-red-50 text-red-600 rounded-xl text-xs border border-red-100/50 font-medium">
+                  {otpError}
+                </div>
+              )}
+
+              <div className="text-sm text-center font-body">
+                {resendTimer > 0 ? (
+                  <span className="text-ink/50 bg-cream/30 py-1 px-3 rounded-full border border-cream-line/30">
+                    Resend code in <strong className="text-gold font-bold">{resendTimer}s</strong>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={otpPending}
+                    className="text-gold hover:text-gold-dark hover:underline font-semibold transition-colors duration-200 disabled:opacity-50"
+                  >
+                    Resend Verification Code
+                  </button>
+                )}
+              </div>
+
+              <div className="flex gap-2.5 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setOtpSent(false)}
+                  className="flex-1 py-2.5 px-3.5 sm:py-3 sm:px-4 bg-cream border border-cream-line text-ink rounded-xl font-semibold hover:bg-cream-deep transition-all duration-300 text-xs sm:text-sm shadow-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={otpPending || otpCode.length !== 6}
+                  onClick={handleVerifyAndPlaceOrder}
+                  className="flex-1 py-2.5 px-3.5 sm:py-3 sm:px-4 bg-ink hover:bg-gold text-cream hover:text-ink rounded-xl font-semibold transition-all duration-300 text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {otpPending ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : 'Verify & Order'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

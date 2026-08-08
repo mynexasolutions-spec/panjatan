@@ -3,17 +3,19 @@ export const ADDRESS_STORAGE_KEY = 'gulshan-addresses'
 export const ORDER_STORAGE_KEY = 'gulshan-orders'
 export const LEGACY_PROFILE_STORAGE_KEY = 'gulshan-customer-profile'
 export const CUSTOMER_CHANGED_EVENT = 'gulshan-login-status-change'
-export const DEMO_OTP = '123456'
 
 export type LocalCustomer = {
+  id: string
   fullName: string
   phone: string
+  email: string
 }
 
 export type LocalAddress = {
   fullName: string
   phone: string
   alternatePhone: string
+  email?: string
   street: string
   city: string
   state: string
@@ -57,6 +59,10 @@ export function normalizeIndianPhone(value: string) {
 
 export function isValidIndianPhone(value: string) {
   return /^[6-9]\d{9}$/.test(normalizeIndianPhone(value))
+}
+
+export function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value || '').trim())
 }
 
 export function isValidCustomerName(value: string) {

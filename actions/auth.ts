@@ -10,6 +10,7 @@ import {
   getCustomerSession,
   setCustomerSession,
 } from '@/lib/customer-session'
+import { sendOtpEmail } from '@/lib/brevo'
 
 export type AuthResult = {
   error?: string
@@ -137,7 +138,7 @@ export async function sendEmailOtp(
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
   // Clean old OTPs for this email & clean all expired OTPs globally
-  await supabase.from('email_otps').delete().eq('email', email)
+  await supabase.from('email_otps').delete().eq('email', email).eq('purpose', 'login')
   await supabase.from('email_otps').delete().lt('expires_at', new Date().toISOString())
 
   // Insert OTP record
@@ -147,6 +148,7 @@ export async function sendEmailOtp(
       email,
       otp,
       full_name: fullName || null,
+      purpose: 'login',
       expires_at: expiresAt
     })
 
@@ -155,77 +157,15 @@ export async function sendEmailOtp(
     return { error: 'Failed to generate verification code. Please try again.' }
   }
 
-  const brevoApiKey = process.env.BREVO_API_KEY
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'noreply@panjatanayurveda.com'
-  const senderName = process.env.BREVO_SENDER_NAME || 'Panjatan Ayurveda'
+  const result = await sendOtpEmail(email, otp, {
+    description: 'Please enter the 6-digit OTP code below to secure your login session.',
+  })
 
-  if (!brevoApiKey) {
-    console.log(`[DEV MODE OTP] Email: ${email}, OTP: ${otp}`)
-    return { success: true }
+  if ('error' in result) {
+    return { error: result.error }
   }
 
-  try {
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'api-key': brevoApiKey,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        sender: { name: senderName, email: senderEmail },
-        to: [{ email }],
-        subject: 'Your Verification Code - Panjatan Ayurveda',
-        htmlContent: `
-          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 32px; border: 1px solid #E6DAC4; border-radius: 24px; background-color: #FBF7F0; text-align: center; box-shadow: 0 4px 20px rgba(33,29,25,0.025);">
-            <!-- Logo Header -->
-            <div style="margin-bottom: 24px;">
-              <h1 style="color: #1E3B2E; font-size: 26px; font-weight: bold; letter-spacing: 2px; margin: 0; font-family: Georgia, serif;">PANJATAN AYURVEDA</h1>
-            </div>
-            
-            <hr style="border: 0; border-top: 1px solid #E6DAC4; margin: 24px 0;" />
-            
-            <!-- Message Heading -->
-            <h2 style="color: #211D19; font-size: 20px; font-weight: bold; margin-bottom: 8px;">Verification Code</h2>
-            <p style="color: #211D19; opacity: 0.8; font-size: 14px; line-height: 1.6; margin-top: 0; max-width: 380px; margin-left: auto; margin-right: auto;">
-              Please enter the 6-digit OTP code below to secure your login session.
-            </p>
-            
-            <!-- OTP Block -->
-            <div style="margin: 32px 0;">
-              <div style="display: inline-block; font-size: 34px; font-weight: bold; letter-spacing: 8px; color: #1E3B2E; padding: 16px 32px; border: 1.5px solid #B9893F; border-radius: 16px; background-color: #F3EADC; text-shadow: 0 1px 0 #fff; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">
-                ${otp}
-              </div>
-            </div>
-            
-            <!-- Expiry notice -->
-            <p style="color: #211D19; opacity: 0.6; font-size: 12px; line-height: 1.5; margin: 24px 0;">
-              This verification code is valid for <strong style="color: #211D19;">10 minutes</strong>.<br />
-              If you did not request this verification, please ignore this email.
-            </p>
-            
-            <hr style="border: 0; border-top: 1px solid #E6DAC4; margin: 24px 0;" />
-            
-            <!-- Footer -->
-            <p style="color: #B9893F; opacity: 0.7; font-size: 11px; margin: 0;">
-              &copy; ${new Date().getFullYear()} Panjatan Ayurveda. All rights reserved.
-            </p>
-          </div>
-        `
-      })
-    })
-
-    if (!response.ok) {
-      const errText = await response.text()
-      console.error('Brevo API Error:', errText)
-      return { error: 'Failed to send verification email.' }
-    }
-
-    return { success: true }
-  } catch (e: any) {
-    console.error('Email Send Error:', e)
-    return { error: 'Failed to send verification email: ' + e.message }
-  }
+  return { success: true }
 }
 
 export async function verifyEmailOtp(
@@ -245,6 +185,7 @@ export async function verifyEmailOtp(
     .from('email_otps')
     .select('*')
     .eq('email', email)
+    .eq('purpose', 'login')
     .order('created_at', { ascending: false })
 
   const record = records?.[0]
@@ -257,12 +198,12 @@ export async function verifyEmailOtp(
   }
 
   if (new Date(record.expires_at) < new Date()) {
-    await supabase.from('email_otps').delete().eq('email', email)
+    await supabase.from('email_otps').delete().eq('email', email).eq('purpose', 'login')
     return { error: 'OTP has expired. Please request a new one.' }
   }
 
   // OTP verified, delete it
-  await supabase.from('email_otps').delete().eq('email', email)
+  await supabase.from('email_otps').delete().eq('email', email).eq('purpose', 'login')
 
   const isMock =
     devMocksEnabled() &&
@@ -281,6 +222,7 @@ export async function verifyEmailOtp(
       id: mockUserId,
       email,
       full_name: fullName || record.full_name || 'Customer',
+      phone: phone || null,
     })
 
     revalidatePath('/', 'layout')
@@ -330,31 +272,36 @@ export async function verifyEmailOtp(
       if (createError.message.includes('already been registered') || createError.message.includes('already exists')) {
         // User actually exists, safe to proceed
       } else {
+        console.error('createUser failed:', createError)
         return { error: 'Failed to create user account: ' + createError.message }
       }
-    } else {
-      try {
-        if (newUser?.user) {
-          await supabase.from('profiles').insert({
-            id: newUser.user.id,
-            email,
-            full_name: nameToUse,
-            role: 'customer',
-            phone: phone || null
-          })
-        }
-      } catch (e) {
-        // Silently catch in case database trigger handles it
+    } else if (newUser?.user) {
+      const { error: insertError } = await supabase.from('profiles').insert({
+        id: newUser.user.id,
+        email,
+        full_name: nameToUse,
+        role: 'customer',
+        phone: phone || null
+      })
+      if (insertError) {
+        // Not fatal by itself (a DB trigger may already have created the row,
+        // or profiles.phone may not exist yet) — logged so it's diagnosable,
+        // the fallback re-select/insert below will retry.
+        console.error('Profile insert after createUser failed:', insertError)
       }
     }
   }
 
   // Custom Cookie Auth Session
-  const { data: profile } = await supabase
+  const { data: profile, error: profileFetchError } = await supabase
     .from('profiles')
     .select('*')
     .eq('email', email)
     .single()
+
+  if (profileFetchError) {
+    console.error('Profile fetch by email failed:', profileFetchError)
+  }
 
   let finalProfile = profile
   if (!finalProfile) {
@@ -363,14 +310,23 @@ export async function verifyEmailOtp(
       const userData = (userList?.users as any[])?.find(u => u.email?.toLowerCase() === email.toLowerCase())
       if (userData) {
         const nameToUse = fullName || record.full_name || 'Customer'
-        const { data: insertedProfile } = await supabase.from('profiles').insert({
-          id: userData.id,
-          email,
-          full_name: nameToUse,
-          role: 'customer',
-          phone: phone || null
-        }).select('*').single()
+        const { data: insertedProfile, error: fallbackInsertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userData.id,
+            email,
+            full_name: nameToUse,
+            role: 'customer',
+            phone: phone || null
+          })
+          .select('*')
+          .single()
+        if (fallbackInsertError) {
+          console.error('Fallback profile insert failed:', fallbackInsertError)
+        }
         finalProfile = insertedProfile
+      } else {
+        console.error(`No auth.users record found for ${email} after createUser — check SUPABASE_SERVICE_ROLE_KEY is valid.`)
       }
     } catch (e) {
       console.error('Error fetching user fallback:', e)
@@ -378,13 +334,28 @@ export async function verifyEmailOtp(
   }
 
   if (!finalProfile) {
-    return { error: 'Failed to establish user profile session.' }
+    return {
+      error:
+        'Failed to establish user profile session. This usually means the `profiles` table (or its `phone` column) or the `email_otps` table has not been migrated on your Supabase project yet — check the server logs above for the exact database error.',
+    }
+  }
+
+  // Backfill a phone number for accounts created before it was collected.
+  if (!finalProfile.phone && phone) {
+    const { data: updatedProfile } = await supabase
+      .from('profiles')
+      .update({ phone })
+      .eq('id', finalProfile.id)
+      .select('*')
+      .single()
+    if (updatedProfile) finalProfile = updatedProfile
   }
 
   await setCustomerSession({
     id: finalProfile.id,
     email: finalProfile.email,
     full_name: finalProfile.full_name,
+    phone: finalProfile.phone || phone || null,
   })
 
   revalidatePath('/', 'layout')
@@ -424,6 +395,38 @@ export async function adminLogin(
 
   revalidatePath('/admin', 'layout')
   redirect('/admin')
+}
+
+export type SessionCustomer = {
+  id: string
+  email: string
+  fullName: string
+  phone: string
+}
+
+/**
+ * Lightweight, client-safe read of the current real customer session
+ * (httpOnly JWT cookie). Used by CustomerContext to hydrate client state
+ * without exposing any Supabase/admin internals.
+ */
+export async function getSessionCustomer(): Promise<SessionCustomer | null> {
+  const session = await getCustomerSession()
+  if (!session) return null
+  return {
+    id: session.sub,
+    email: session.email,
+    fullName: session.full_name,
+    phone: session.phone || '',
+  }
+}
+
+/**
+ * Clears the customer session cookie without redirecting, so client code
+ * (e.g. a header/profile logout button) can control navigation itself.
+ */
+export async function logoutCustomer() {
+  await clearCustomerSession()
+  revalidatePath('/', 'layout')
 }
 
 export async function getCurrentCustomer() {

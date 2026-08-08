@@ -11,18 +11,13 @@ import {
 import {
   ADDRESS_STORAGE_KEY,
   CUSTOMER_CHANGED_EVENT,
-  CUSTOMER_STORAGE_KEY,
-  LEGACY_PROFILE_STORAGE_KEY,
   LocalAddress,
   LocalCustomer,
   LocalOrder,
   ORDER_STORAGE_KEY,
-  isValidCustomerName,
-  isValidIndianPhone,
-  normalizeIndianPhone,
 } from '@/lib/local-customer'
-import { getGuestOrderStatuses } from '@/actions/checkout'
-import { registerDemoCustomer } from '@/actions/customer'
+import { getMyOrders } from '@/actions/checkout'
+import { getSessionCustomer, logoutCustomer } from '@/actions/auth'
 
 type AddressBook = Record<string, LocalAddress>
 
@@ -31,8 +26,8 @@ type CustomerContextValue = {
   address: LocalAddress | null
   orders: LocalOrder[]
   isHydrated: boolean
-  login: (fullName: string, phone: string) => Promise<void>
-  logout: () => void
+  refreshCustomer: () => Promise<LocalCustomer | null>
+  logout: () => Promise<void>
   saveAddress: (address: LocalAddress) => void
   addOrder: (order: LocalOrder) => void
   syncOrders: () => Promise<void>
@@ -55,69 +50,73 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
   const [allOrders, setAllOrders] = useState<LocalOrder[]>([])
   const [isHydrated, setIsHydrated] = useState(false)
 
+  // Real, server-verified identity (httpOnly session cookie). This is the
+  // source of truth for "who is logged in" — the address book stays in
+  // localStorage, keyed by phone, but order history is fetched fresh from
+  // the database (see syncOrdersFor) so it isn't limited to one device.
+  const refreshCustomer = useCallback(async () => {
+    const session = await getSessionCustomer()
+    const next: LocalCustomer | null = session
+      ? { id: session.id, fullName: session.fullName, phone: session.phone, email: session.email }
+      : null
+    setCustomer(next)
+    window.dispatchEvent(new Event(CUSTOMER_CHANGED_EVENT))
+    return next
+  }, [])
+
+  // Fetches order history for a specific customer from the database and
+  // writes it into localStorage as a cache. Takes the customer explicitly
+  // (rather than reading it from state) so it can be called immediately
+  // after login, before CustomerProvider has necessarily re-rendered with
+  // the new value yet.
+  const syncOrdersFor = useCallback(async (forCustomer: LocalCustomer) => {
+    const result = await getMyOrders()
+    if (!result.success) return
+    const email = forCustomer.email.toLowerCase()
+    setAllOrders((current) => {
+      const others = current.filter(
+        (order) => (order.shippingAddress?.email || '').toLowerCase() !== email
+      )
+      const next = [...result.orders, ...others]
+      localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
   useEffect(() => {
-    const savedCustomer = readJson<LocalCustomer | null>(CUSTOMER_STORAGE_KEY, null)
     const savedAddresses = readJson<AddressBook>(ADDRESS_STORAGE_KEY, {})
     const savedOrders = readJson<LocalOrder[]>(ORDER_STORAGE_KEY, [])
-
-    setCustomer(savedCustomer)
     setAddressBook(savedAddresses)
     setAllOrders(savedOrders)
-    setIsHydrated(true)
-    if (savedCustomer) {
-      void registerDemoCustomer(savedCustomer.fullName, savedCustomer.phone)
-    }
-  }, [])
 
-  const login = useCallback(async (fullName: string, phoneInput: string) => {
-    const phone = normalizeIndianPhone(phoneInput)
-    const name = fullName.trim().replace(/\s+/g, ' ')
-    if (!isValidCustomerName(name) || !isValidIndianPhone(phone)) {
-      throw new Error('Please enter a valid full name and Indian mobile number.')
-    }
+    void refreshCustomer()
+      .then((next) => (next ? syncOrdersFor(next) : undefined))
+      .finally(() => setIsHydrated(true))
+  }, [refreshCustomer, syncOrdersFor])
 
-    const next = { fullName: name, phone }
-    setCustomer(next)
-    localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(next))
-
-    const legacy = readJson<Partial<LocalAddress>>(LEGACY_PROFILE_STORAGE_KEY, {})
-    if (!addressBook[phone] && legacy.phone && normalizeIndianPhone(legacy.phone) === phone) {
-      const migrated: LocalAddress = {
-        fullName: legacy.fullName || name,
-        phone,
-        alternatePhone: legacy.alternatePhone || '',
-        street: legacy.street || '',
-        city: legacy.city || '',
-        state: legacy.state || '',
-        zipCode: legacy.zipCode || '',
-      }
-      const nextBook = { ...addressBook, [phone]: migrated }
-      setAddressBook(nextBook)
-      localStorage.setItem(ADDRESS_STORAGE_KEY, JSON.stringify(nextBook))
-    }
-    window.dispatchEvent(new Event(CUSTOMER_CHANGED_EVENT))
-    await registerDemoCustomer(name, phone)
-  }, [addressBook])
-
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await logoutCustomer()
     setCustomer(null)
-    localStorage.removeItem(CUSTOMER_STORAGE_KEY)
     window.dispatchEvent(new Event(CUSTOMER_CHANGED_EVENT))
   }, [])
 
+  // Keyed by email (the account's fixed identity), not phone — the
+  // shipping "phone" on an address is allowed to differ from the account's
+  // own phone (e.g. ordering for someone else), so phone can't double as a
+  // lookup key. Reads nextAddress.email directly (not context `customer`
+  // state) so this is safe to call immediately after login — right after
+  // verifyEmailOtp succeeds, `customer` in this closure can still be stale
+  // for one tick until CustomerProvider re-renders.
   const saveAddress = useCallback((nextAddress: LocalAddress) => {
-    if (!customer) throw new Error('Please log in before saving an address.')
-    const normalized = {
-      ...nextAddress,
-      fullName: nextAddress.fullName.trim(),
-      phone: customer.phone,
-    }
+    const email = (nextAddress.email || '').trim().toLowerCase()
+    if (!email) throw new Error('An account email is required to save an address.')
+    const normalized = { ...nextAddress, fullName: nextAddress.fullName.trim(), email }
     setAddressBook((current) => {
-      const next = { ...current, [customer.phone]: normalized }
+      const next = { ...current, [email]: normalized }
       localStorage.setItem(ADDRESS_STORAGE_KEY, JSON.stringify(next))
       return next
     })
-  }, [customer])
+  }, [])
 
   const addOrder = useCallback((order: LocalOrder) => {
     setAllOrders((current) => {
@@ -134,31 +133,17 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
 
   const syncOrders = useCallback(async () => {
     if (!customer) return
-    const known = allOrders.filter((order) => order.customerPhone === customer.phone)
-    if (known.length === 0) return
-    const result = await getGuestOrderStatuses(
-      customer.phone,
-      known.map((order) => order.orderNumber)
-    )
-    if (!result.success || result.orders.length === 0) return
-    const updates = new Map(result.orders.map((order) => [order.orderNumber, order]))
-    setAllOrders((current) => {
-      const next = current.map((order) => {
-        const update = updates.get(order.orderNumber)
-        return update ? { ...order, status: update.status, paymentStatus: update.paymentStatus } : order
-      })
-      localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(next))
-      return next
-    })
-  }, [allOrders, customer])
+    await syncOrdersFor(customer)
+  }, [customer, syncOrdersFor])
 
-  const address = customer ? addressBook[customer.phone] || null : null
-  const orders = useMemo(
-    () => customer
-      ? allOrders.filter((order) => order.customerPhone === customer.phone)
-      : [],
-    [allOrders, customer]
-  )
+  const address = customer ? addressBook[customer.email.toLowerCase()] || null : null
+  const orders = useMemo(() => {
+    if (!customer) return []
+    const email = customer.email.toLowerCase()
+    return allOrders.filter(
+      (order) => (order.shippingAddress?.email || '').toLowerCase() === email
+    )
+  }, [allOrders, customer])
 
   return (
     <CustomerContext.Provider value={{
@@ -166,7 +151,7 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
       address,
       orders,
       isHydrated,
-      login,
+      refreshCustomer,
       logout,
       saveAddress,
       addOrder,

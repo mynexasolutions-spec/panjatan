@@ -65,6 +65,8 @@ export async function createProduct(
 
   const name = formData.get('name') as string
   const categoryId = formData.get('category_id') as string
+  const price = formData.get('price') as string
+  const oldPrice = formData.get('old_price') as string
   const shortDescription = formData.get('short_description') as string
   const description = formData.get('description') as string
   const fabric = formData.get('fabric') as string
@@ -80,11 +82,16 @@ export async function createProduct(
     return { error: 'Product name is required' }
   }
 
+  if (!price || isNaN(parseFloat(price))) {
+    return { error: 'Price is required' }
+  }
+
   const slug = slugify(name)
   const { data: product, error } = await supabase.from('products').insert({
     name,
     slug,
-    price: 0,
+    price: parseFloat(price),
+    oldPrice: oldPrice ? parseFloat(oldPrice) : null,
     category_id: categoryId || null,
     short_description: shortDescription || null,
     description: description || null,
@@ -122,6 +129,8 @@ export async function updateProduct(
   const id = formData.get('id') as string
   const name = formData.get('name') as string
   const categoryId = formData.get('category_id') as string
+  const price = formData.get('price') as string
+  const oldPrice = formData.get('old_price') as string
   const shortDescription = formData.get('short_description') as string
   const description = formData.get('description') as string
   const fabric = formData.get('fabric') as string
@@ -137,6 +146,10 @@ export async function updateProduct(
     return { error: 'Product ID and name are required' }
   }
 
+  if (!price || isNaN(parseFloat(price))) {
+    return { error: 'Price is required' }
+  }
+
   const slug = slugify(name)
 
   const { error } = await supabase
@@ -144,6 +157,8 @@ export async function updateProduct(
     .update({
       name,
       slug,
+      price: parseFloat(price),
+      oldPrice: oldPrice ? parseFloat(oldPrice) : null,
       category_id: categoryId || null,
       short_description: shortDescription || null,
       description: description || null,

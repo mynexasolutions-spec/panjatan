@@ -5,7 +5,7 @@ import { sanitizeReturnTo } from '@/lib/local-customer'
 
 export const metadata = {
   title: 'Login | Panjatan Ayurveda',
-  description: 'Demo customer login with your name and Indian mobile number.',
+  description: 'Log in or create your account with a verified email address.',
 }
 
 export default async function LoginPage({
@@ -24,7 +24,7 @@ export default async function LoginPage({
           <div className="text-center mb-8">
             <h1 className="font-heading text-3xl font-bold text-ink">Customer Login</h1>
             <p className="text-ink/70 mt-2 font-body">
-              Enter your name and mobile number to continue on this device.
+              Log in or create your account with a verified email address.
             </p>
           </div>
           <AuthForm returnTo={returnTo} />

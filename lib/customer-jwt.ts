@@ -10,6 +10,7 @@ export type CustomerSession = {
   sub: string
   email: string
   full_name: string
+  phone: string
   role: 'customer'
   iat: number
   exp: number
@@ -60,6 +61,7 @@ export async function createCustomerToken(input: {
   id: string
   email: string
   full_name?: string | null
+  phone?: string | null
 }) {
   const now = Math.floor(Date.now() / 1000)
   const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
@@ -67,6 +69,7 @@ export async function createCustomerToken(input: {
     sub: input.id,
     email: input.email,
     full_name: input.full_name || 'Customer',
+    phone: input.phone || '',
     role: 'customer',
     iat: now,
     exp: now + CUSTOMER_SESSION_MAX_AGE,

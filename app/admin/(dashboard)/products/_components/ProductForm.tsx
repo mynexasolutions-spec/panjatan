@@ -130,6 +130,52 @@ export default function ProductForm({ product, categories, otherProducts = [] }:
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Price */}
+              <div>
+                <label
+                  htmlFor="product-price"
+                  className="block text-sm font-medium text-stone-700 mb-1.5"
+                >
+                  Price (₹) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="product-price"
+                  name="price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  defaultValue={(product as any)?.price ?? ''}
+                  placeholder="e.g. 499"
+                  className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
+                />
+              </div>
+
+              {/* Old Price */}
+              <div>
+                <label
+                  htmlFor="product-old-price"
+                  className="block text-sm font-medium text-stone-700 mb-1.5"
+                >
+                  Old Price (₹)
+                </label>
+                <input
+                  id="product-old-price"
+                  name="old_price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={(product as any)?.oldPrice ?? ''}
+                  placeholder="Optional — shown as strikethrough"
+                  className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
+                />
+                <p className="text-xs text-stone-400 mt-1.5">
+                  Leave blank if there&apos;s no discount.
+                </p>
+              </div>
+            </div>
+
             {/* Short Description */}
             <div>
               <label
@@ -318,16 +364,16 @@ export default function ProductForm({ product, categories, otherProducts = [] }:
             </div>
           </div>
           {/* Colors Management */}
-          <div className="bg-white rounded-xl border border-stone-200/80 p-6 space-y-5">
+          {/* <div className="bg-white rounded-xl border border-stone-200/80 p-6 space-y-5">
             <h2 className="text-base font-semibold text-stone-900">Product Colors</h2>
             <p className="text-xs text-stone-400 -mt-3">
               Add the colors available for this product. 
               <strong> Click "Update Product" to save the product and generate these tabs for image uploads below.</strong>
             </p>
 
-            <div className="space-y-4">
+            <div className="space-y-4"> */}
               {/* Color List / Tags */}
-              {colorsList.length > 0 ? (
+              {/* {colorsList.length > 0 ? (
                 <div className="flex flex-wrap gap-2 p-3 bg-stone-50 rounded-xl border border-stone-200/60">
                   {colorsList.map((c) => (
                     <div 
@@ -353,10 +399,10 @@ export default function ProductForm({ product, categories, otherProducts = [] }:
                 <div className="p-4 text-center rounded-xl border-2 border-dashed border-stone-200 bg-stone-50/50">
                   <p className="text-xs text-stone-450">No colors added yet.</p>
                 </div>
-              )}
+              )} */}
 
               {/* Add New Color Form */}
-              <div className="flex items-center gap-3">
+              {/* <div className="flex items-center gap-3">
                 <div className="flex-1">
                   <input
                     type="text"
@@ -388,14 +434,13 @@ export default function ProductForm({ product, categories, otherProducts = [] }:
                 >
                   Add
                 </button>
-              </div>
+              </div> */}
 
               {/* Hidden field to submit JSON string to backend */}
               <input type="hidden" name="color_name" value={JSON.stringify(colorsList)} />
           </div>
         </div>
-      </div>
-      </div>
+      
 
       {/* Actions */}
       <div className="flex items-center justify-between">

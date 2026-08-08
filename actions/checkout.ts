@@ -3,7 +3,9 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
-import { isValidIndianPhone, normalizeIndianPhone } from '@/lib/local-customer'
+import { isValidEmail, isValidIndianPhone, normalizeIndianPhone } from '@/lib/local-customer'
+import type { LocalAddress, LocalOrder } from '@/lib/local-customer'
+import { getCustomerSession } from '@/lib/customer-session'
 
 export type CheckoutPaymentMethod = 'COD' | 'ONLINE'
 export type CheckoutPaymentStatus = 'pending' | 'simulated'
@@ -12,6 +14,7 @@ export type CheckoutProfile = {
   fullName: string
   phone: string
   alternatePhone?: string
+  email: string
   street: string
   city: string
   state: string
@@ -69,6 +72,7 @@ function validateProfile(profile: CheckoutProfile) {
   if (
     !profile.fullName?.trim() ||
     !profile.phone?.trim() ||
+    !profile.email?.trim() ||
     !profile.street?.trim() ||
     !profile.city?.trim() ||
     !profile.state?.trim() ||
@@ -79,6 +83,10 @@ function validateProfile(profile: CheckoutProfile) {
 
   if (!isValidIndianPhone(profile.phone)) {
     throw new Error('Please enter a valid 10-digit Indian mobile number.')
+  }
+
+  if (!isValidEmail(profile.email)) {
+    throw new Error('Please enter a valid email address.')
   }
 
   if (!/^\d{6}$/.test(profile.zipCode.trim())) {
@@ -171,11 +179,26 @@ export async function processCheckout(
       throw new Error('Database checkout is not configured.')
     }
 
+    // The order's identity must come from a real, server-verified session —
+    // never trust a client-submitted email/phone alone. This is what makes
+    // "verify once, no need to re-verify" both possible and safe.
+    const session = await getCustomerSession()
+    if (!session) {
+      throw new Error('Please log in (verify your email) before placing the order.')
+    }
+    if (session.email.trim().toLowerCase() !== profile.email.trim().toLowerCase()) {
+      throw new Error('Your session does not match this email. Please refresh and try again.')
+    }
+    // Note: phone is intentionally NOT cross-checked against the account's
+    // registered phone — shipping to a different contact number (e.g.
+    // ordering for someone else) is allowed, same as the reference checkout.
+
     const adminClient = createAdminClient()
     const shippingAddress = {
       full_name: profile.fullName.trim(),
       phone: normalizeIndianPhone(profile.phone),
       alternate_phone: profile.alternatePhone?.trim() || null,
+      email: profile.email.trim().toLowerCase(),
       address_line_1: profile.street.trim(),
       address_line_2: null,
       city: profile.city.trim(),
@@ -225,6 +248,87 @@ export async function processCheckout(
       success: false,
       error: error instanceof Error ? error.message : 'Unable to place your order.',
     }
+  }
+}
+
+/**
+ * Fetches the full order history for the logged-in customer, straight from
+ * the database — keyed by the account's verified email (stored on every
+ * order's shipping_address at checkout time), not by device-local storage.
+ * This is what makes order history survive a cleared browser or a different
+ * device, unlike the old "orders on this device" localStorage-only view.
+ */
+export async function getMyOrders(): Promise<
+  | { success: true; orders: LocalOrder[] }
+  | { success: false; orders: []; error: string }
+> {
+  try {
+    const session = await getCustomerSession()
+    if (!session) {
+      return { success: false, orders: [], error: 'Not logged in.' }
+    }
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return { success: true, orders: [] }
+    }
+
+    const email = session.email.trim().toLowerCase()
+    const { data, error } = await createAdminClient()
+      .from('orders')
+      .select(
+        `id, order_number, created_at, currency_code, subtotal, discount, shipping_cost,
+         cod_cost, online_discount_amount, total_amount, payment_method, payment_status,
+         order_status, shipping_address, customer_phone,
+         order_items ( product_id, variant_id, product_name, variant_name, price_at_purchase, quantity )`
+      )
+      .eq('shipping_address->>email', email)
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    if (error) throw new Error(error.message)
+
+    const orders: LocalOrder[] = (data || []).map((row: any) => {
+      const shipping = row.shipping_address || {}
+      const shippingAddress: LocalAddress = {
+        fullName: shipping.full_name || '',
+        phone: shipping.phone || row.customer_phone || '',
+        alternatePhone: shipping.alternate_phone || '',
+        email: shipping.email || email,
+        street: shipping.address_line_1 || '',
+        city: shipping.city || '',
+        state: shipping.state || '',
+        zipCode: shipping.postal_code || '',
+      }
+      return {
+        id: row.id,
+        orderNumber: row.order_number,
+        customerPhone: row.customer_phone || shippingAddress.phone,
+        createdAt: row.created_at,
+        currencyCode: 'INR',
+        subtotal: Number(row.subtotal),
+        discount: Number(row.discount),
+        shipping: Number(row.shipping_cost),
+        codFee: Number(row.cod_cost),
+        onlineDiscount: Number(row.online_discount_amount),
+        total: Number(row.total_amount),
+        paymentMethod: row.payment_method,
+        paymentStatus: row.payment_status,
+        status: row.order_status,
+        shippingAddress,
+        items: (row.order_items || []).map((item: any) => ({
+          productId: item.product_id,
+          variantId: item.variant_id,
+          productName: item.product_name,
+          variantName: item.variant_name,
+          price: Number(item.price_at_purchase),
+          quantity: item.quantity,
+        })),
+      }
+    })
+
+    return { success: true, orders }
+  } catch (error) {
+    console.error('Fetching order history failed:', error)
+    return { success: false, orders: [], error: 'Unable to load order history.' }
   }
 }
 

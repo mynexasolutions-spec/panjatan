@@ -9,7 +9,7 @@ import { Search, User, ShoppingBag, CheckCircle2, Menu, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCustomer } from "@/context/CustomerContext";
 
-export default function HeaderClient({ settings, navLinks }: { settings: SiteSettings; navLinks: NavigationLink[] }) {
+export default function HeaderClient({ settings, navLinks, announcementText }: { settings: SiteSettings; navLinks: NavigationLink[]; announcementText?: string | null }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -40,9 +40,9 @@ export default function HeaderClient({ settings, navLinks }: { settings: SiteSet
       <header className="fixed top-0 inset-x-0 z-[9999] bg-white transition-shadow duration-300">
         {/* Top Announcement Bar - Dark Green */}
         <div className="bg-[#0D3B23] text-white text-xs py-1.5 px-3 md:px-8 border-b border-emerald-900 overflow-hidden">
-          <div className="max-w-wrap mx-auto flex items-center justify-between gap-3 md:gap-2 whitespace-nowrap">
+          <div className="max-w-wrap mx-auto flex items-center justify-center gap-3 md:gap-2 whitespace-nowrap">
             {/* Left Items with Green Checkmarks */}
-            <div className="flex items-center gap-2.5 md:gap-6 text-[10px] md:text-xs font-medium tracking-wide min-w-0">
+            {/* <div className="flex items-center gap-2.5 md:gap-6 text-[10px] md:text-xs font-medium tracking-wide min-w-0">
               <span className="inline-flex items-center gap-1 opacity-90">
                 <CheckCircle2 className="w-3 h-3 md:w-3.5 md:h-3.5 text-emerald-400 shrink-0" /> GMP Certified
               </span>
@@ -55,12 +55,14 @@ export default function HeaderClient({ settings, navLinks }: { settings: SiteSet
               <span className="hidden sm:inline-flex items-center gap-1.5 opacity-90">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> No Harmful Chemicals
               </span>
-            </div>
+            </div> */}
 
             {/* Right Side Announcement */}
-            <div className="hidden sm:block text-[11px] md:text-xs font-medium tracking-wide text-emerald-100 truncate">
-              {settings.announcement_text}
-            </div>
+            {announcementText && (
+              <div className="hidden sm:block  iterms-center text-[11px] md:text-xs font-medium tracking-wide text-emerald-100 truncate">
+                {announcementText}
+              </div>
+            )}
           </div>
         </div>
 

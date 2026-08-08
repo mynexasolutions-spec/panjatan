@@ -15,6 +15,7 @@ export async function setCustomerSession(input: {
   id: string
   email: string
   full_name?: string | null
+  phone?: string | null
 }) {
   const store = await cookies()
   store.set(CUSTOMER_SESSION_COOKIE, await createCustomerToken(input), {
