@@ -111,6 +111,22 @@ export async function register(
   redirect(redirectTo && redirectTo.startsWith('/') ? redirectTo : '/')
 }
 
+/**
+ * Lightweight existence check used by the sign-up form so it can steer
+ * an already-registered visitor to the login page *before* an OTP is
+ * ever sent, instead of letting them fill in the whole form first.
+ */
+export async function checkCustomerEmailExists(email: string): Promise<boolean> {
+  if (!email) return false
+  const supabase = await createClient()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', email.trim().toLowerCase())
+    .maybeSingle()
+  return !!profile
+}
+
 export async function sendEmailOtp(
   email: string,
   mode: 'LOGIN' | 'REGISTER',
@@ -130,7 +146,19 @@ export async function sendEmailOtp(
       .maybeSingle()
 
     if (!profile) {
-      return { error: 'User does not exist, first create an account' }
+      return { error: 'No account found for this email. Please sign up first.' }
+    }
+  }
+
+  if (mode === 'REGISTER') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle()
+
+    if (profile) {
+      return { error: 'An account with this email already exists. Please log in instead.' }
     }
   }
 

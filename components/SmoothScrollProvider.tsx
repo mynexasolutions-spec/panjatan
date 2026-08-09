@@ -1,11 +1,20 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 export default function SmoothScrollProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAdmin = pathname?.startsWith("/admin");
+
   useEffect(() => {
+    // Admin dashboard scrolls its own internal panes (not the window), and
+    // Lenis hijacks wheel events on the document to drive window scrolling.
+    // That breaks mouse-wheel scrolling inside the admin UI, so skip it there.
+    if (isAdmin) return;
+
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) return;
 
@@ -46,7 +55,7 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
       gsap.ticker.remove(onTick);
       lenis.destroy();
     };
-  }, []);
+  }, [isAdmin]);
 
   return <>{children}</>;
 }
