@@ -15,6 +15,7 @@ import { sendOtpEmail } from '@/lib/brevo'
 export type AuthResult = {
   error?: string
   success?: boolean
+  customer?: SessionCustomer
 }
 
 export async function login(
@@ -388,7 +389,15 @@ export async function verifyEmailOtp(
 
   revalidatePath('/', 'layout')
   if (redirectTo === 'NO_REDIRECT') {
-    return { success: true }
+    return {
+      success: true,
+      customer: {
+        id: finalProfile.id,
+        email: finalProfile.email,
+        fullName: finalProfile.full_name,
+        phone: finalProfile.phone || phone || '',
+      },
+    }
   }
   redirect(redirectTo && redirectTo.startsWith('/') ? redirectTo : '/')
 }

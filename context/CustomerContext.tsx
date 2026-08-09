@@ -26,7 +26,7 @@ type CustomerContextValue = {
   address: LocalAddress | null
   orders: LocalOrder[]
   isHydrated: boolean
-  refreshCustomer: () => Promise<LocalCustomer | null>
+  refreshCustomer: (localData?: LocalCustomer | null) => Promise<LocalCustomer | null>
   logout: () => Promise<void>
   saveAddress: (address: LocalAddress) => void
   addOrder: (order: LocalOrder) => void
@@ -54,7 +54,12 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
   // source of truth for "who is logged in" — the address book stays in
   // localStorage, keyed by phone, but order history is fetched fresh from
   // the database (see syncOrdersFor) so it isn't limited to one device.
-  const refreshCustomer = useCallback(async () => {
+  const refreshCustomer = useCallback(async (localData?: LocalCustomer | null) => {
+    if (localData !== undefined) {
+      setCustomer(localData)
+      window.dispatchEvent(new Event(CUSTOMER_CHANGED_EVENT))
+      return localData
+    }
     const session = await getSessionCustomer()
     const next: LocalCustomer | null = session
       ? { id: session.id, fullName: session.fullName, phone: session.phone, email: session.email }

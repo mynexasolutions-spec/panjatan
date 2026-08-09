@@ -79,7 +79,16 @@ export default function LoginForm({
       setError(res.error)
       return
     }
-    await refreshCustomer()
+    if (res.customer) {
+      await refreshCustomer({
+        id: res.customer.id,
+        email: res.customer.email,
+        fullName: res.customer.fullName,
+        phone: res.customer.phone,
+      })
+    } else {
+      await refreshCustomer()
+    }
     router.replace(returnTo)
     router.refresh()
   }
@@ -129,7 +138,7 @@ export default function LoginForm({
             maxLength={6}
             className="w-full rounded-xl border border-cream-line bg-cream px-4 py-3 text-center text-2xl font-bold tracking-[0.45em] outline-none focus:border-gold"
             placeholder="123456" autoFocus />
-          <button disabled={verifying || otp.length !== 6}
+          <button type="submit" disabled={verifying}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-ink px-5 py-3.5 font-semibold text-cream transition hover:bg-gold hover:text-ink disabled:opacity-60">
             {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Verify & continue <ArrowRight className="h-4 w-4" /></>}
           </button>
