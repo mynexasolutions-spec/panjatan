@@ -404,6 +404,7 @@ export async function getMyOrders(): Promise<
          order_items ( product_id, variant_id, product_name, variant_name, price_at_purchase, quantity )`
       )
       .eq('shipping_address->>email', email)
+      .or('payment_method.eq.cod,payment_status.eq.paid,payment_status.eq.simulated')
       .order('created_at', { ascending: false })
       .limit(100)
 
