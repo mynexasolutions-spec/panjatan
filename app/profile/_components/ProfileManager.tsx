@@ -22,8 +22,13 @@ export default function ProfileManager() {
   const { customer, address, orders, isHydrated, logout, saveAddress, syncOrders } = useCustomer()
   const [profile, setProfile] = useState<LocalAddress>(EMPTY_ADDRESS)
   const [saved, setSaved] = useState(false)
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({})
   const { showToast } = useToast()
   const router = useRouter()
+
+  const toggleOrder = (orderId: string) => {
+    setExpandedOrders((prev) => ({ ...prev, [orderId]: !prev[orderId] }))
+  }
 
   useEffect(() => {
     if (!isHydrated) return
@@ -147,23 +152,114 @@ export default function ProfileManager() {
         <h3 className="flex items-center gap-2 font-semibold text-ink">
           <Package className="h-5 w-5 text-gold" /> Order history
         </h3>
-        {orders.length ? orders.map((order) => (
-          <div key={order.id} className="rounded-xl border border-cream-line bg-cream/20 p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-bold text-ink">Order #{order.orderNumber}</p>
-                <p className="mt-1 text-xs text-ink/55">{new Date(order.createdAt).toLocaleDateString('en-IN')}</p>
-                <p className="mt-1 text-xs text-ink/55">{order.items.length} item{order.items.length === 1 ? '' : 's'} · {order.paymentMethod === 'cod' ? 'Cash on delivery' : 'Online demo'}</p>
+        {orders.length ? orders.map((order) => {
+          const isExpanded = !!expandedOrders[order.id]
+          return (
+            <div key={order.id} className="rounded-xl border border-cream-line bg-cream/20 p-4 space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-bold text-ink">Order #{order.orderNumber}</p>
+                  <p className="mt-1 text-xs text-ink/55">{new Date(order.createdAt).toLocaleDateString('en-IN')}</p>
+                  <p className="mt-1 text-xs text-ink/55">
+                    {order.items.length} item{order.items.length === 1 ? '' : 's'} ·{' '}
+                    {order.paymentMethod === 'cod' ? 'Cash on delivery' : 'Pay Online (Razorpay)'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-emerald">₹{order.total.toLocaleString('en-IN')}</p>
+                  <span className="mt-2 inline-block rounded-md border border-cream-line bg-white px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-ink/60">
+                    {order.status}
+                  </span>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="font-semibold text-emerald">₹{order.total.toLocaleString('en-IN')}</p>
-                <span className="mt-2 inline-block rounded-md border border-cream-line bg-white px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-ink/60">
-                  {order.status}
-                </span>
+
+              {/* Toggle Details Button */}
+              <div className="flex justify-end border-t border-cream-line/30 pt-3">
+                <button
+                  type="button"
+                  onClick={() => toggleOrder(order.id)}
+                  className="text-xs font-bold text-emerald hover:text-emerald-deep hover:underline transition-all"
+                >
+                  {isExpanded ? 'Hide Details' : 'View Details'}
+                </button>
               </div>
+
+              {/* Expanded details */}
+              {isExpanded && (
+                <div className="border-t border-cream-line/35 pt-4 space-y-4 text-xs text-ink/80 animate-fade-in">
+                  {/* Items List */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40">Items</p>
+                    <div className="divide-y divide-cream-line/30 bg-white rounded-xl border border-cream-line/50 px-3">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between py-2.5">
+                          <div>
+                            <span className="font-semibold text-ink">{item.productName}</span>
+                            {item.variantName && (
+                              <span className="text-ink/60 block">Variant: {item.variantName}</span>
+                            )}
+                            <span className="text-ink/50 block">Qty: {item.quantity} · ₹{item.price} each</span>
+                          </div>
+                          <span className="font-bold text-ink shrink-0">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Shipping Address */}
+                  <div className="space-y-1 bg-white rounded-xl border border-cream-line/50 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40 mb-1">Shipping Address</p>
+                    <p className="font-semibold">{order.shippingAddress.fullName}</p>
+                    <p>{order.shippingAddress.street}</p>
+                    <p>{order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.zipCode}</p>
+                    <p className="text-ink/50 mt-1">Phone: {order.shippingAddress.phone}</p>
+                  </div>
+
+                  {/* Pricing Summary */}
+                  <div className="bg-white rounded-xl border border-cream-line/50 p-3 space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-ink/40 mb-1">Payment Summary</p>
+                    <div className="flex justify-between">
+                      <span className="text-ink/60">Subtotal</span>
+                      <span className="font-medium text-ink">₹{order.subtotal.toLocaleString('en-IN')}</span>
+                    </div>
+                    {order.shipping > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-ink/60">Shipping</span>
+                        <span className="font-medium text-ink">₹{order.shipping}</span>
+                      </div>
+                    )}
+                    {order.codFee > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-ink/60">COD Fee</span>
+                        <span className="font-medium text-ink">₹{order.codFee}</span>
+                      </div>
+                    )}
+                    {order.onlineDiscount > 0 && (
+                      <div className="flex justify-between text-emerald font-semibold">
+                        <span>Online Discount</span>
+                        <span>-₹{order.onlineDiscount.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    {order.discount > 0 && (
+                      <div className="flex justify-between text-emerald font-semibold">
+                        <span>Coupon Discount</span>
+                        <span>-₹{order.discount.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t border-cream-line/30 pt-2 font-bold text-sm">
+                      <span className="text-ink">Grand Total</span>
+                      <span className="text-emerald">₹{order.total.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-ink/50 border-t border-cream-line/30 pt-2">
+                      <span>Payment Status</span>
+                      <span className="uppercase font-semibold text-ink/80">{order.paymentStatus}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )) : (
+          )
+        }) : (
           <p className="py-6 text-center text-sm text-ink/50">No orders placed yet.</p>
         )}
       </div>

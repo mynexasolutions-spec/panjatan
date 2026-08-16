@@ -15,13 +15,23 @@ import {
 
 const RESEND_COOLDOWN_SECONDS = 45
 
-export default function SignupForm({ returnTo = '/' }: { returnTo?: string }) {
+export default function SignupForm({
+  returnTo = '/',
+  initialEmail = '',
+  initialFullName = '',
+  initialPhone = '',
+}: {
+  returnTo?: string
+  initialEmail?: string
+  initialFullName?: string
+  initialPhone?: string
+}) {
   const router = useRouter()
   const { refreshCustomer } = useCustomer()
   const [step, setStep] = useState<'DETAILS' | 'EXISTS' | 'OTP'>('DETAILS')
-  const [fullName, setFullName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState(initialFullName)
+  const [phone, setPhone] = useState(initialPhone)
+  const [email, setEmail] = useState(initialEmail)
   const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
   const [checkingEmail, setCheckingEmail] = useState(false)

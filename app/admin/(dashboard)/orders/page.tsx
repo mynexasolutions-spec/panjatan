@@ -17,6 +17,7 @@ export default async function AdminOrdersPage() {
   const { data: orders, error: ordersError } = await supabase
     .from('orders')
     .select('*')
+    .or('payment_method.eq.cod,payment_status.eq.paid,payment_status.eq.simulated')
     .order('created_at', { ascending: false })
 
   if (ordersError) {

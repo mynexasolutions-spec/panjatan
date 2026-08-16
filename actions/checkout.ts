@@ -1,14 +1,28 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { randomUUID } from 'crypto'
+import { randomUUID, createHmac } from 'crypto'
 import { revalidatePath } from 'next/cache'
 import { isValidEmail, isValidIndianPhone, normalizeIndianPhone } from '@/lib/local-customer'
 import type { LocalAddress, LocalOrder } from '@/lib/local-customer'
 import { getCustomerSession } from '@/lib/customer-session'
 
+function getRazorpayInstance() {
+  const keyId = process.env.RAZORPAY_KEY_ID
+  const keySecret = process.env.RAZORPAY_KEY_SECRET
+  if (!keyId || !keySecret) return null
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Razorpay = require('razorpay')
+  return new Razorpay({ key_id: keyId, key_secret: keySecret })
+}
+
+export async function isRazorpayEnabled(): Promise<boolean> {
+  return Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
+}
+
 export type CheckoutPaymentMethod = 'COD' | 'ONLINE'
-export type CheckoutPaymentStatus = 'pending' | 'simulated'
+export type CheckoutPaymentStatus = 'pending' | 'simulated' | 'paid' | 'failed'
 
 export type CheckoutProfile = {
   fullName: string
@@ -40,7 +54,7 @@ export type PlacedOrder = {
   total: number
   paymentMethod: 'cod' | 'online'
   paymentStatus: CheckoutPaymentStatus
-  status: 'pending'
+  status: string
 }
 
 export type CheckoutResult =
@@ -57,7 +71,11 @@ export type CheckoutResult =
       total: number
       paymentMethod: 'cod' | 'online'
       paymentStatus: CheckoutPaymentStatus
-      orderStatus: 'pending'
+      orderStatus: string
+      isRazorpay?: boolean
+      razorpayOrderId?: string
+      razorpayKeyId?: string
+      razorpayAmount?: number
       error?: never
     }
   | {
@@ -127,8 +145,8 @@ function normalizeOrder(data: unknown): PlacedOrder {
     typeof order.createdAt !== 'string' ||
     order.currencyCode !== 'INR' ||
     (order.paymentMethod !== 'cod' && order.paymentMethod !== 'online') ||
-    (order.paymentStatus !== 'pending' && order.paymentStatus !== 'simulated') ||
-    order.status !== 'pending'
+    !['pending', 'simulated', 'paid', 'failed'].includes(order.paymentStatus as string) ||
+    typeof order.status !== 'string'
   ) {
     throw new Error('The database returned an incomplete order.')
   }
@@ -145,7 +163,7 @@ function normalizeOrder(data: unknown): PlacedOrder {
     onlineDiscount: Number(order.onlineDiscount),
     total: Number(order.total),
     paymentMethod: order.paymentMethod,
-    paymentStatus: order.paymentStatus,
+    paymentStatus: order.paymentStatus as CheckoutPaymentStatus,
     status: order.status,
   }
 }
@@ -170,6 +188,9 @@ export async function processCheckout(
     const normalizedItems = normalizeItems(items)
     if (paymentMethod !== 'COD' && paymentMethod !== 'ONLINE') {
       throw new Error('Unsupported payment method.')
+    }
+    if (paymentMethod === 'ONLINE' && !(await isRazorpayEnabled())) {
+      throw new Error('Online payment is currently unavailable. Please choose Cash on Delivery.')
     }
 
     if (
@@ -227,8 +248,7 @@ export async function processCheckout(
     revalidatePath('/profile')
     revalidatePath('/admin/orders')
 
-    return {
-      success: true,
+    const baseResult = {
       orderId: order.id,
       order_number: order.orderNumber,
       currencyCode: order.currencyCode,
@@ -241,12 +261,115 @@ export async function processCheckout(
       paymentMethod: order.paymentMethod,
       paymentStatus: order.paymentStatus,
       orderStatus: order.status,
+    } as const
+
+    // Order already paid (e.g. an idempotent retry after the payment was
+    // already verified) — nothing more to do on the gateway side.
+    if (order.paymentMethod === 'online' && order.paymentStatus !== 'paid') {
+      const razorpay = getRazorpayInstance()
+      if (!razorpay) {
+        return { success: false, error: 'Online payments are not configured yet. Please choose Cash on Delivery.' }
+      }
+      try {
+        const rzpOrder = await razorpay.orders.create({
+          amount: Math.round(order.total * 100),
+          currency: 'INR',
+          receipt: order.id,
+          notes: { internal_order_id: order.id },
+        })
+        await adminClient.from('orders').update({ razorpay_order_id: rzpOrder.id }).eq('id', order.id)
+
+        return {
+          success: true,
+          ...baseResult,
+          isRazorpay: true,
+          razorpayOrderId: rzpOrder.id,
+          razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+          razorpayAmount: rzpOrder.amount,
+        }
+      } catch (e) {
+        const reason = (e as any)?.error?.description || (e as Error)?.message || 'Unknown error'
+        console.error('Razorpay order creation failed:', (e as any)?.error || e)
+        return { success: false, error: `Failed to start online payment: ${reason}` }
+      }
     }
+
+    return { success: true, ...baseResult }
   } catch (error) {
     console.error('Checkout failed:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unable to place your order.',
+    }
+  }
+}
+
+/**
+ * Verifies a completed Razorpay checkout using the HMAC signature Razorpay
+ * returns to the browser, then marks the order paid. This is the
+ * authoritative confirmation path alongside the webhook in
+ * app/api/webhooks/razorpay/route.ts — either one marking the order paid is
+ * sufficient, and both are idempotent against the order's current status.
+ */
+export async function verifyRazorpayPayment(
+  razorpayPaymentId: string,
+  razorpayOrderId: string,
+  razorpaySignature: string,
+  internalOrderId: string
+): Promise<{ success: true; alreadyPaid?: boolean; error?: never } | { success: false; error: string }> {
+  try {
+    const secret = process.env.RAZORPAY_KEY_SECRET
+    if (!secret) return { success: false, error: 'Razorpay is not configured.' }
+
+    if (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature || !internalOrderId) {
+      return { success: false, error: 'Missing payment verification details.' }
+    }
+
+    const expectedSignature = createHmac('sha256', secret)
+      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+      .digest('hex')
+
+    if (expectedSignature !== razorpaySignature) {
+      return { success: false, error: 'Payment verification failed.' }
+    }
+
+    const adminClient = createAdminClient()
+    const { data: order, error: fetchError } = await adminClient
+      .from('orders')
+      .select('id, razorpay_order_id, payment_status')
+      .eq('id', internalOrderId)
+      .maybeSingle()
+
+    if (fetchError || !order || order.razorpay_order_id !== razorpayOrderId) {
+      return { success: false, error: 'Order mismatch — payment could not be linked to your order.' }
+    }
+
+    if (order.payment_status === 'paid') {
+      return { success: true, alreadyPaid: true }
+    }
+
+    const { error: updateError } = await adminClient
+      .from('orders')
+      .update({
+        payment_status: 'paid',
+        order_status: 'processing',
+        razorpay_payment_id: razorpayPaymentId,
+        paid_at: new Date().toISOString(),
+      })
+      .eq('id', internalOrderId)
+
+    if (updateError) throw new Error(updateError.message)
+
+    revalidatePath('/checkout')
+    revalidatePath('/profile')
+    revalidatePath('/admin/orders')
+
+    return { success: true }
+  } catch (error) {
+    console.error('Razorpay payment verification failed:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Payment verification failed.',
     }
   }
 }

@@ -11,7 +11,7 @@ export const metadata = {
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ returnTo?: string; redirect?: string }>
+  searchParams: Promise<{ returnTo?: string; redirect?: string; email?: string; fullName?: string; phone?: string }>
 }) {
   const params = await searchParams
   const returnTo = sanitizeReturnTo(params.returnTo || params.redirect)
@@ -27,7 +27,12 @@ export default async function SignupPage({
               Sign up with your name, mobile number, and a verified email address.
             </p>
           </div>
-          <SignupForm returnTo={returnTo} />
+          <SignupForm
+            returnTo={returnTo}
+            initialEmail={params.email}
+            initialFullName={params.fullName}
+            initialPhone={params.phone}
+          />
         </div>
       </main>
       <Footer />

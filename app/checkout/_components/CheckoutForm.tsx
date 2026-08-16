@@ -1,12 +1,14 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useTransition } from 'react'
+import Script from 'next/script'
+import { useRouter } from 'next/navigation'
 import { useCart } from '@/context/CartContext'
 import { useCustomer } from '@/context/CustomerContext'
 import { useToast } from '@/context/ToastContext'
 import { validateCoupon } from '@/actions/admin/coupons'
-import { processCheckout } from '@/actions/checkout'
-import { sendEmailOtp, verifyEmailOtp } from '@/actions/auth'
+import { processCheckout, verifyRazorpayPayment, type CheckoutResult } from '@/actions/checkout'
+import { checkCustomerEmailExists, sendEmailOtp, verifyEmailOtp } from '@/actions/auth'
 import { SITE } from '@/lib/data'
 import { Truck, Tag, CreditCard, ShoppingBag, CheckCircle2, Lock, Plus, Minus, X, Loader2 } from 'lucide-react'
 import Image from 'next/image'
@@ -20,6 +22,12 @@ import {
   normalizeIndianPhone,
 } from '@/lib/local-customer'
 
+declare global {
+  interface Window {
+    Razorpay?: any
+  }
+}
+
 type ShippingSettings = {
   flat_rate: number
   free_threshold: number
@@ -27,11 +35,20 @@ type ShippingSettings = {
   online_discount?: number
 }
 
-export default function CheckoutForm({ shipping, hasCoupons = false }: { shipping: ShippingSettings, hasCoupons?: boolean }) {
+export default function CheckoutForm({
+  shipping,
+  hasCoupons = false,
+  razorpayEnabled = false,
+}: {
+  shipping: ShippingSettings
+  hasCoupons?: boolean
+  razorpayEnabled?: boolean
+}) {
   const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } = useCart()
   const { customer, address, isHydrated, saveAddress, addOrder, refreshCustomer } = useCustomer()
   const { showToast } = useToast()
   const [pending, startTransition] = useTransition()
+  const router = useRouter()
 
   // Shipping Address Form State
   const [profile, setProfile] = useState({
@@ -61,7 +78,7 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
   const [couponSuccess, setCouponSuccess] = useState('')
 
   // Payment Method
-  const [paymentMethod, setPaymentMethod] = useState<'Cash on Delivery' | 'Online Payment (Demo)'>('Cash on Delivery')
+  const [paymentMethod, setPaymentMethod] = useState<'Cash on Delivery' | 'Pay Online (Razorpay)'>('Cash on Delivery')
   const checkoutIdempotencyKey = useRef<string | null>(null)
 
   // Success Modal State
@@ -124,7 +141,7 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
   }
 
   const onlineDiscountPercent = shipping.online_discount ?? 0
-  const onlineDiscountAmount = paymentMethod === 'Online Payment (Demo)'
+  const onlineDiscountAmount = paymentMethod === 'Pay Online (Razorpay)'
     ? Math.round((subtotal * onlineDiscountPercent) / 100)
     : 0
 
@@ -155,7 +172,7 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
   // verification the context hasn't necessarily re-rendered with the new
   // session yet.
   const executeOrderPlacement = async (customerForOrder: LocalCustomer) => {
-    const method = paymentMethod === 'Online Payment (Demo)' ? 'ONLINE' : 'COD'
+    const method = paymentMethod === 'Pay Online (Razorpay)' ? 'ONLINE' : 'COD'
     checkoutIdempotencyKey.current ||= crypto.randomUUID()
 
     const savedAddress: LocalAddress = {
@@ -180,45 +197,122 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
 
     if (!res.success) {
       showToast(res.error || 'Failed to place order.', 'error')
-    } else {
-      const localOrder: LocalOrder = {
-        id: res.orderId,
-        orderNumber: res.order_number,
-        customerPhone: savedAddress.phone,
-        createdAt: new Date().toISOString(),
-        currencyCode: res.currencyCode,
-        subtotal: res.subtotal,
-        discount: res.discount,
-        shipping: res.shipping,
-        codFee: res.codFee,
-        onlineDiscount: res.onlineDiscount,
-        total: res.total,
-        paymentMethod: res.paymentMethod,
-        paymentStatus: res.paymentStatus,
-        status: res.orderStatus,
-        shippingAddress: savedAddress,
-        items: cart.map((item) => ({
-          productId: item.id,
-          variantId: item.variant_id,
-          productName: item.name,
-          variantName: item.variant_name,
-          imageUrl: item.image_url,
-          price: item.price,
-          quantity: item.quantity,
-        })),
-      }
-      addOrder(localOrder)
-      setPlacedOrder({
-        order_number: res.order_number,
-        id: res.orderId,
-        total: res.total,
-        paymentStatus: res.paymentStatus,
-        items: [...cart],
-        shippingAddress: `${profile.street}, ${profile.city}, ${profile.state} - ${profile.zipCode}`
-      })
-      checkoutIdempotencyKey.current = null
-      clearCart()
+      return
     }
+
+    const cartSnapshot = [...cart]
+    const buildLocalOrder = (paymentStatus: string): LocalOrder => ({
+      id: res.orderId,
+      orderNumber: res.order_number,
+      customerPhone: savedAddress.phone,
+      createdAt: new Date().toISOString(),
+      currencyCode: res.currencyCode,
+      subtotal: res.subtotal,
+      discount: res.discount,
+      shipping: res.shipping,
+      codFee: res.codFee,
+      onlineDiscount: res.onlineDiscount,
+      total: res.total,
+      paymentMethod: res.paymentMethod,
+      paymentStatus,
+      status: res.orderStatus,
+      shippingAddress: savedAddress,
+      items: cartSnapshot.map((item) => ({
+        productId: item.id,
+        variantId: item.variant_id,
+        productName: item.name,
+        variantName: item.variant_name,
+        imageUrl: item.image_url,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+    })
+
+    // Razorpay orders aren't final yet — the checkout modal has to run and
+    // the payment has to be signature-verified before the order counts as
+    // placed. Cart/order-history state is only committed once that succeeds.
+    if (res.isRazorpay) {
+      openRazorpayCheckout(res, savedAddress, cartSnapshot, buildLocalOrder)
+      return
+    }
+
+    const localOrder = buildLocalOrder(res.paymentStatus)
+    addOrder(localOrder)
+    setPlacedOrder({
+      order_number: res.order_number,
+      id: res.orderId,
+      total: res.total,
+      paymentStatus: res.paymentStatus,
+      items: cartSnapshot,
+      shippingAddress: `${profile.street}, ${profile.city}, ${profile.state} - ${profile.zipCode}`
+    })
+    checkoutIdempotencyKey.current = null
+    clearCart()
+  }
+
+  const openRazorpayCheckout = (
+    res: Extract<CheckoutResult, { success: true }>,
+    savedAddress: LocalAddress,
+    cartSnapshot: typeof cart,
+    buildLocalOrder: (paymentStatus: string) => LocalOrder
+  ) => {
+    if (typeof window === 'undefined' || !window.Razorpay) {
+      showToast('Payment gateway is still loading — please try again in a moment.', 'error')
+      return
+    }
+
+    const rzp = new window.Razorpay({
+      key: res.razorpayKeyId,
+      amount: res.razorpayAmount,
+      currency: 'INR',
+      name: 'Panjatan Ayurveda',
+      description: `Order ${res.order_number}`,
+      order_id: res.razorpayOrderId,
+      prefill: {
+        name: savedAddress.fullName,
+        email: savedAddress.email,
+        contact: savedAddress.phone,
+      },
+      handler: async (response: any) => {
+        const verify = await verifyRazorpayPayment(
+          response.razorpay_payment_id,
+          response.razorpay_order_id,
+          response.razorpay_signature,
+          res.orderId
+        )
+
+        if (!verify.success) {
+          showToast(verify.error || 'Payment verification failed.', 'error')
+          return
+        }
+
+        const localOrder = buildLocalOrder('paid')
+        addOrder(localOrder)
+        setPlacedOrder({
+          order_number: res.order_number,
+          id: res.orderId,
+          total: res.total,
+          paymentStatus: 'paid',
+          paymentId: response.razorpay_payment_id,
+          items: cartSnapshot,
+          shippingAddress: `${profile.street}, ${profile.city}, ${profile.state} - ${profile.zipCode}`,
+        })
+        checkoutIdempotencyKey.current = null
+        clearCart()
+      },
+      modal: {
+        ondismiss: () => {
+          showToast('Payment cancelled. Click Place Order to try again.', 'error')
+        },
+      },
+      theme: { color: '#0A6C35' },
+    })
+
+    rzp.on('payment.failed', (response: any) => {
+      showToast(response?.error?.description || 'Payment failed. Please try again.', 'error')
+    })
+
+    rzp.open()
   }
 
   const validateShippingFields = () => {
@@ -250,22 +344,27 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
     if (!validateShippingFields()) return
 
     if (!customer) {
-      if (!otpSent) {
-        setOtpPending(true)
-        startTransition(async () => {
-          const res = await sendEmailOtp(profile.email.trim().toLowerCase(), 'REGISTER', profile.fullName.trim())
-          setOtpPending(false)
-          if (res?.error) {
-            showToast(res.error, 'error')
+      setOtpPending(true)
+      startTransition(async () => {
+        try {
+          const email = profile.email.trim().toLowerCase()
+          const exists = await checkCustomerEmailExists(email)
+          
+          if (exists) {
+            showToast('Account exists. Redirecting to login...', 'success')
+            router.push(`/login?email=${encodeURIComponent(email)}&returnTo=/checkout`)
           } else {
-            setOtpSent(true)
-            setOtpError('')
-            showToast('Verification code sent to ' + profile.email, 'success')
+            showToast('Creating profile... Redirecting to signup...', 'success')
+            const fullName = encodeURIComponent(profile.fullName.trim())
+            const phone = encodeURIComponent(profile.phone.trim())
+            router.push(`/signup?email=${encodeURIComponent(email)}&fullName=${fullName}&phone=${phone}&returnTo=/checkout`)
           }
-        })
-        return
-      }
-      handleVerifyAndPlaceOrder()
+        } catch (err: any) {
+          showToast(err.message || 'Error checking account status.', 'error')
+        } finally {
+          setOtpPending(false)
+        }
+      })
       return
     }
 
@@ -354,10 +453,9 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
             <span className="text-ink/50 uppercase font-semibold">Payment Method</span>
             <span className="font-bold text-ink">{paymentMethod}</span>
           </div>
-          {placedOrder.paymentStatus === 'simulated' && (
-            <p className="pt-3 border-t border-cream-line/50 text-xs text-ink/60 leading-relaxed">
-              This online payment was simulated. No card, UPI, or bank details
-              were requested and no real charge was made.
+          {placedOrder.paymentStatus === 'paid' && placedOrder.paymentId && (
+            <p className="pt-3 border-t border-cream-line/50 text-xs text-ink/60">
+              Payment ID: <span className="font-mono font-bold text-ink select-all">{placedOrder.paymentId}</span>
             </p>
           )}
         </div>
@@ -374,6 +472,12 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
             </svg>
             Confirm via WhatsApp
           </a>
+          <Link
+            href="/profile"
+            className="w-full inline-flex items-center justify-center py-3.5 px-4 bg-cream border border-cream-line text-ink font-body font-semibold rounded-full hover:bg-cream-deep transition-all text-sm shadow-sm"
+          >
+            See Order Details
+          </Link>
           <a
             href="/"
             className="w-full inline-flex items-center justify-center py-3 text-sm text-ink/60 hover:text-emerald font-semibold transition-colors"
@@ -387,6 +491,8 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
 
   return (
     <>
+      {razorpayEnabled && <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />}
+
       <form noValidate onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       {/* Left Column: Shipping Address & Payment Form */}
       <div className="lg:col-span-7 space-y-6">
@@ -550,25 +656,32 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
               <span className="text-xs text-ink/50 mt-1">Pay COD charge & product value at your doorstep.</span>
             </label>
 
-            <label className={`flex flex-col p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-              paymentMethod === 'Online Payment (Demo)'
-                ? 'border-emerald bg-emerald/5'
-                : 'border-cream-line bg-white hover:border-cream-line-dark'
-            }`}>
-              <input
-                type="radio"
-                name="payment"
-                checked={paymentMethod === 'Online Payment (Demo)'}
-                onChange={() => setPaymentMethod('Online Payment (Demo)')}
-                className="sr-only"
-              />
-              <span className="font-bold text-ink text-sm">
-                Online Payment (Demo) {shipping.online_discount ? `(${shipping.online_discount}% Off)` : ''}
-              </span>
-              <span className="text-xs text-ink/50 mt-1">
-                Simulates a successful payment. No payment details are requested or charged.
-              </span>
-            </label>
+            {razorpayEnabled ? (
+              <label className={`flex flex-col p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                paymentMethod === 'Pay Online (Razorpay)'
+                  ? 'border-emerald bg-emerald/5'
+                  : 'border-cream-line bg-white hover:border-cream-line-dark'
+              }`}>
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === 'Pay Online (Razorpay)'}
+                  onChange={() => setPaymentMethod('Pay Online (Razorpay)')}
+                  className="sr-only"
+                />
+                <span className="font-bold text-ink text-sm">
+                  Pay Online (Razorpay) {shipping.online_discount ? `(${shipping.online_discount}% Off)` : ''}
+                </span>
+                <span className="text-xs text-ink/50 mt-1">
+                  Cards, UPI, netbanking & wallets — secured by Razorpay.
+                </span>
+              </label>
+            ) : (
+              <div className="flex flex-col p-4 rounded-2xl border-2 border-dashed border-cream-line bg-cream/20 justify-center">
+                <span className="font-semibold text-ink/40 text-sm">Online Payment</span>
+                <span className="text-xs text-ink/40 mt-1">Currently unavailable — please use Cash on Delivery.</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -692,8 +805,8 @@ export default function CheckoutForm({ shipping, hasCoupons = false }: { shippin
               <>
                 <ShoppingBag className="w-5 h-5" />
                 {customer
-                  ? paymentMethod === 'Online Payment (Demo)'
-                    ? `Simulate Payment & Place Order • ₹${grandTotal.toLocaleString('en-IN')}`
+                  ? paymentMethod === 'Pay Online (Razorpay)'
+                    ? `Pay ₹${grandTotal.toLocaleString('en-IN')} with Razorpay`
                     : `Place COD Order • ₹${grandTotal.toLocaleString('en-IN')}`
                   : (otpSent ? 'Confirm OTP & Place Order' : 'Verify Email & Place Order')}
               </>

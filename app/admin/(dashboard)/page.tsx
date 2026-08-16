@@ -22,7 +22,8 @@ async function getStats() {
     await Promise.all([
       supabase
         .from('orders')
-        .select('id, total_amount', { count: 'exact', head: false }),
+        .select('id, total_amount', { count: 'exact', head: false })
+        .or('payment_method.eq.cod,payment_status.eq.paid,payment_status.eq.simulated'),
       supabase
         .from('profiles')
         .select('id', { count: 'exact', head: true })
@@ -33,6 +34,7 @@ async function getStats() {
       supabase
         .from('orders')
         .select('id, order_number, total_amount, order_status, payment_status, created_at')
+        .or('payment_method.eq.cod,payment_status.eq.paid,payment_status.eq.simulated')
         .order('created_at', { ascending: false })
         .limit(5),
     ])

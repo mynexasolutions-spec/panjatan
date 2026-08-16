@@ -251,7 +251,7 @@ export default async function AdminOrderDetailsPage({
               )}
               {Number(order.online_discount_amount) > 0 && (
                 <div className="flex justify-between text-green-700">
-                  <span>Online Demo Discount</span>
+                  <span>Online Payment Discount</span>
                   <span className="font-medium">-₹{order.online_discount_amount}</span>
                 </div>
               )}
@@ -269,10 +269,22 @@ export default async function AdminOrderDetailsPage({
 
             <div className="mt-6 pt-6 border-t border-stone-200">
               <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">Payment Method</p>
-              <p className="text-sm font-medium text-stone-900">{order.payment_method}</p>
+              <p className="text-sm font-medium text-stone-900 capitalize">
+                {order.payment_method === 'online' ? 'Razorpay' : order.payment_method}
+              </p>
               {order.payment_status === 'simulated' && (
                 <p className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800">
-                  Mock online payment. No card, UPI, bank details, or real charge were involved.
+                  Legacy mock online payment. No card, UPI, bank details, or real charge were involved.
+                </p>
+              )}
+              {order.razorpay_payment_id && (
+                <p className="mt-2 text-xs text-stone-500">
+                  Razorpay Payment ID: <span className="font-mono text-stone-700 select-all">{order.razorpay_payment_id}</span>
+                </p>
+              )}
+              {order.payment_method === 'online' && order.payment_status === 'pending' && (
+                <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                  Awaiting payment. Stock is held for this order — cancel it to release the stock if the customer never completes payment.
                 </p>
               )}
             </div>

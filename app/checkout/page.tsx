@@ -1,5 +1,6 @@
 import { getShippingSettings } from '@/actions/admin/shipping'
 import { getCoupons } from '@/actions/admin/coupons'
+import { isRazorpayEnabled } from '@/actions/checkout'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import CheckoutForm from './_components/CheckoutForm'
@@ -9,8 +10,11 @@ export const metadata = {
 }
 
 export default async function CheckoutPage() {
-  const shipping = await getShippingSettings()
-  const coupons = await getCoupons()
+  const [shipping, coupons, razorpayEnabled] = await Promise.all([
+    getShippingSettings(),
+    getCoupons(),
+    isRazorpayEnabled(),
+  ])
   const hasCoupons = coupons.some(c => c.is_active)
 
   return (
@@ -18,7 +22,7 @@ export default async function CheckoutPage() {
       <Header />
       <main className="min-h-screen bg-cream pt-28 pb-16 md:pt-36 md:pb-24">
         <div className="max-w-wrap mx-auto px-5 md:px-8">
-          <CheckoutForm shipping={shipping} hasCoupons={hasCoupons} />
+          <CheckoutForm shipping={shipping} hasCoupons={hasCoupons} razorpayEnabled={razorpayEnabled} />
         </div>
       </main>
       <Footer />
