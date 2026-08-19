@@ -2,9 +2,9 @@ export const SITE = {
   name: "Panjatan Ayurveda",
   tagline: "Pure Ayurvedic Medicines for a Healthy Today & Better Tomorrow",
   email: "care@panjatanayurveda.com",
-  phone: "+91 73000 70707",
-  phoneHref: "+917300070707",
-  whatsapp: "917300070707",
+  phone: "+91 70370 25763",
+  phoneHref: "+917037025763",
+  whatsapp: "917037025763",
   whatsappMessage: "Hi Panjatan Ayurveda! I would like to inquire about your Ayurvedic products.",
   city: "India",
 };

@@ -39,10 +39,12 @@ export default function CheckoutForm({
   shipping,
   hasCoupons = false,
   razorpayEnabled = false,
+  whatsappNumber = '',
 }: {
   shipping: ShippingSettings
   hasCoupons?: boolean
   razorpayEnabled?: boolean
+  whatsappNumber?: string
 }) {
   const { cart, cartTotal, clearCart, updateQuantity, removeFromCart } = useCart()
   const { customer, address, isHydrated, saveAddress, addOrder, refreshCustomer } = useCustomer()
@@ -426,7 +428,7 @@ export default function CheckoutForm({
     if (!placedOrder) return ''
     const itemsText = placedOrder.items.map((i: any) => `- ${i.name} (x${i.quantity})`).join('\n')
     const message = `Hi Panjatan Ayurveda!\n\nI just placed an order:\nOrder Number: *${placedOrder.order_number}*\nItems:\n${itemsText}\nTotal Amount: *₹${placedOrder.total.toLocaleString('en-IN')}*\nPayment Method: *${paymentMethod}*\n\nShipping Address: ${placedOrder.shippingAddress}\n\nPlease confirm my order. Thank you!`
-    return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(message)}`
+    return `https://wa.me/${whatsappNumber || SITE.whatsapp}?text=${encodeURIComponent(message)}`
   }
 
   if (placedOrder) {

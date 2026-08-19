@@ -6,10 +6,10 @@ import { Star, CheckCircle, Trash2, Clock } from 'lucide-react'
 
 type Review = {
   id: string
-  product_id: string
+  product_id: number
   user_id: string
   rating: number
-  review_text: string | null
+  comment: string | null
   is_approved: boolean
   created_at: string
   products: { name: string } | null
@@ -89,7 +89,7 @@ export function ReviewList({ initialReviews }: { initialReviews: Review[] }) {
                 </td>
                 <td className="p-4">
                   <div className="font-medium text-stone-900">{review.products?.name || 'Unknown Product'}</div>
-                  <div className="text-xs text-stone-500">ID: {review.product_id.substring(0, 8)}...</div>
+                  <div className="text-xs text-stone-500">ID: {String(review.product_id).substring(0, 8)}...</div>
                 </td>
                 <td className="p-4">
                   <div className="font-medium text-stone-900">{review.customer_name || review.profiles?.full_name || 'Anonymous'}</div>
@@ -106,11 +106,11 @@ export function ReviewList({ initialReviews }: { initialReviews: Review[] }) {
                   </div>
                 </td>
                 <td className="p-4 max-w-xs">
-                  <p className="text-sm text-stone-600 truncate" title={review.review_text || ''}>
-                    {review.review_text || <span className="italic text-stone-400">No text</span>}
+                  <p className="text-sm text-stone-600 truncate" title={review.comment || ''}>
+                    {review.comment || <span className="italic text-stone-400">No text</span>}
                   </p>
                   <div className="text-xs text-stone-400 mt-1">
-                    {new Date(review.created_at).toLocaleDateString()}
+                    {new Date(review.created_at).toLocaleDateString('en-IN')}
                   </div>
                 </td>
                 <td className="p-4 text-right">
