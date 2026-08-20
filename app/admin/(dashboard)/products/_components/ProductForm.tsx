@@ -130,51 +130,17 @@ export default function ProductForm({ product, categories, otherProducts = [] }:
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Price */}
-              <div>
-                <label
-                  htmlFor="product-price"
-                  className="block text-sm font-medium text-stone-700 mb-1.5"
-                >
-                  Price (₹) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="product-price"
-                  name="price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  defaultValue={(product as any)?.price ?? ''}
-                  placeholder="e.g. 499"
-                  className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
-                />
-              </div>
-
-              {/* Old Price */}
-              <div>
-                <label
-                  htmlFor="product-old-price"
-                  className="block text-sm font-medium text-stone-700 mb-1.5"
-                >
-                  Old Price (₹)
-                </label>
-                <input
-                  id="product-old-price"
-                  name="old_price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  defaultValue={(product as any)?.oldPrice ?? ''}
-                  placeholder="Optional — shown as strikethrough"
-                  className="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/40 focus:border-orange-500 transition-all duration-200"
-                />
-                <p className="text-xs text-stone-400 mt-1.5">
-                  Leave blank if there&apos;s no discount.
-                </p>
-              </div>
-            </div>
+            {/* Price fields hidden as price is managed via pack size options (variants) */}
+            <input
+              type="hidden"
+              name="price"
+              value={(product as any)?.price ?? '0'}
+            />
+            <input
+              type="hidden"
+              name="old_price"
+              value={(product as any)?.oldPrice ?? ''}
+            />
 
             {/* Short Description */}
             <div>
